@@ -31,6 +31,15 @@
         z-index: -2 !important;
       }
 
+      /* Force A-Frame scene canvas to take full screen and not default to a tiny box */
+      a-scene {
+        width: 100vw !important;
+        height: 100vh !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
         background: #0f172a;
@@ -150,8 +159,10 @@
       #scan-hint.hidden { opacity: 0; }
 
       .scan-frame {
-        width: 200px;
-        height: 200px;
+        width: 300px;
+        height: 300px;
+        max-width: 70vw;
+        max-height: 70vh;
         border: 3px solid rgba(65, 105, 225, 0.8);
         border-radius: 12px;
         position: relative;
