@@ -8,10 +8,12 @@
 
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <!-- AR.js (Marker tracking via barcode) -->
+    <!-- AR.js (Marker tracking) -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <!-- Gesture Detector & Handler Libraries -->
     <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
+    <!-- A-Frame Extras for GLTF animation support -->
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
@@ -20,6 +22,26 @@
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
+      /* Prevent camera video distortion/zoom issues */
+      video.arjs-video {
+        object-fit: cover !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: -2 !important;
+      }
+
+      /* Force A-Frame scene canvas to take full screen */
+      a-scene {
+        width: 100vw !important;
+        height: 100vh !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
         background: #0f172a;
@@ -27,7 +49,7 @@
         overflow: hidden;
       }
 
-      /* Loading screen */
+      /* ── Loading screen ─────────────────────────────── */
       #loading-screen {
         position: fixed;
         inset: 0;
@@ -42,11 +64,7 @@
         padding: 2rem;
         transition: opacity 0.6s ease;
       }
-
-      #loading-screen.hidden {
-        opacity: 0;
-        pointer-events: none;
-      }
+      #loading-screen.hidden { opacity: 0; pointer-events: none; }
 
       .loader-logo {
         font-size: 3rem;
@@ -55,64 +73,103 @@
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
-
       .spinner {
-        width: 48px;
-        height: 48px;
+        width: 48px; height: 48px;
         border: 4px solid rgba(65, 105, 225, 0.2);
         border-top: 4px solid #4169e1;
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-
-      /* Info overlay shown when marker found */
-      #info-panel {
+      /* Play / Pause button (top-left) */
+      #anim-btn {
         position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(0deg, rgba(15,23,42,0.97) 0%, rgba(15,23,42,0.8) 80%, transparent 100%);
-        padding: 2rem 1.5rem 1.5rem;
-        z-index: 100;
-        transform: translateY(100%);
-        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        top: 1rem;
+        left: 1rem;
+        z-index: 200;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 50%;
+        width: 46px;
+        height: 46px;
+        font-size: 1.25rem;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        transition: background 0.2s, transform 0.2s;
+      }
+      #anim-btn:hover  { background: rgba(65,105,225,0.7); transform: scale(1.1); }
+      #anim-btn.visible { display: flex; }
+
+      /* Brightness slider (top-center, discrete pill) */
+      #brightness-wrap {
+        position: fixed;
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 999px;
+        padding: 0.4rem 0.9rem;
+      }
+      #brightness-wrap span {
+        font-size: 0.85rem;
+        opacity: 0.7;
+        white-space: nowrap;
+        user-select: none;
+      }
+      #brightness-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 110px;
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(to right, #4169e1 0%, #4169e1 50%, rgba(255,255,255,0.25) 50%);
+        outline: none;
+        cursor: pointer;
+      }
+      #brightness-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px; height: 16px;
+        border-radius: 50%;
+        background: #60a5fa;
+        box-shadow: 0 0 6px rgba(65,105,225,0.6);
+        cursor: pointer;
+      }
+      #brightness-slider::-moz-range-thumb {
+        width: 16px; height: 16px;
+        border-radius: 50%;
+        background: #60a5fa;
+        border: none;
+        cursor: pointer;
       }
 
-      #info-panel.visible {
-        transform: translateY(0);
-      }
-
-      #exhibit-name {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: #60a5fa;
-        margin-bottom: 0.5rem;
-      }
-
-      #exhibit-description {
-        font-size: 0.9rem;
-        color: #cbd5e1;
-        line-height: 1.6;
-        max-height: 80px;
-        overflow-y: auto;
-      }
-
-      /* Audio control button */
+      /* Audio button (top-right) */
       #audio-btn {
         position: fixed;
-        top: 1.5rem;
-        right: 1.5rem;
+        top: 1rem;
+        right: 1rem;
         z-index: 200;
-        background: rgba(65, 105, 225, 0.9);
+        background: rgba(65, 105, 225, 0.85);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         border: none;
         border-radius: 50%;
-        width: 52px;
-        height: 52px;
-        font-size: 1.5rem;
+        width: 46px;
+        height: 46px;
+        font-size: 1.3rem;
         cursor: pointer;
         display: none;
         align-items: center;
@@ -120,94 +177,71 @@
         box-shadow: 0 4px 16px rgba(65, 105, 225, 0.4);
         transition: transform 0.2s;
       }
-
-      #audio-btn:hover { transform: scale(1.1); }
+      #audio-btn:hover  { transform: scale(1.1); }
       #audio-btn.visible { display: flex; }
 
-      /* Scanning indicator */
+      /* ── Scanning indicator ─────────────────────────── */
       #scan-hint {
         position: fixed;
-        top: 50%;
-        left: 50%;
+        top: 50%; left: 50%;
         transform: translate(-50%, -50%);
         text-align: center;
         z-index: 100;
         pointer-events: none;
         transition: opacity 0.4s;
       }
-
       #scan-hint.hidden { opacity: 0; }
 
       .scan-frame {
-        width: 300px;
-        height: 300px;
-        max-width: 70vw;
-        max-height: 70vh;
+        width: 300px; height: 300px;
+        max-width: 70vw; max-height: 70vh;
         border: 3px solid rgba(65, 105, 225, 0.8);
         border-radius: 12px;
         position: relative;
         margin: 0 auto 1rem;
         animation: pulse-border 2s ease-in-out infinite;
       }
-
       .scan-frame::before, .scan-frame::after {
-        content: '';
-        position: absolute;
-        width: 30px;
-        height: 30px;
-        border-color: #4169e1;
-        border-style: solid;
+        content: ''; position: absolute;
+        width: 30px; height: 30px;
+        border-color: #4169e1; border-style: solid;
       }
       .scan-frame::before { top: -3px; left: -3px; border-width: 3px 0 0 3px; border-radius: 8px 0 0 0; }
       .scan-frame::after  { bottom: -3px; right: -3px; border-width: 0 3px 3px 0; border-radius: 0 0 8px 0; }
-
       @keyframes pulse-border {
         0%, 100% { border-color: rgba(65,105,225,0.8); box-shadow: 0 0 0 0 rgba(65,105,225,0.4); }
         50%       { border-color: rgba(96,165,250,1);  box-shadow: 0 0 0 10px rgba(65,105,225,0); }
       }
+      .scan-label { font-size: 0.9rem; color: rgba(255,255,255,0.8); text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
 
-      .scan-label {
-        font-size: 0.9rem;
-        color: rgba(255,255,255,0.8);
-        text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-      }
-
-/* Disable webcam video mirroring for correct orientation & prevent video distortion/zoom issues */
-video.arjs-video {
-  transform: none !important;
-  object-fit: cover !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  z-index: -2 !important;
-}
-
-/* Force A-Frame scene canvas to take full screen and not default to a tiny box */
-a-scene {
-  width: 100vw !important;
-  height: 100vh !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-}
-
-      /* Error screen */
-      #error-screen {
+      /* ── Info panel (footer) ────────────────────────── */
+      #info-panel {
         position: fixed;
-        inset: 0;
-        background: #0f172a;
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        text-align: center;
-        padding: 2rem;
-        gap: 1rem;
+        bottom: 0; left: 0; right: 0;
+        background: linear-gradient(0deg, rgba(15,23,42,0.97) 0%, rgba(15,23,42,0.8) 80%, transparent 100%);
+        padding: 2rem 1.5rem 1.5rem;
+        z-index: 100;
+        transform: translateY(100%);
+        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      #info-panel.visible { transform: translateY(0); }
+
+      #exhibit-name {
+        font-size: 1.4rem; font-weight: 700;
+        color: #60a5fa; margin-bottom: 0.5rem;
+      }
+      #exhibit-description {
+        font-size: 0.9rem; color: #cbd5e1;
+        line-height: 1.6; max-height: 80px; overflow-y: auto;
       }
 
+      /* ── Error screen ───────────────────────────────── */
+      #error-screen {
+        position: fixed; inset: 0;
+        background: #0f172a; display: none;
+        flex-direction: column; align-items: center; justify-content: center;
+        z-index: 9999; text-align: center; padding: 2rem; gap: 1rem;
+      }
       #error-screen.visible { display: flex; }
       #error-msg { color: #94a3b8; font-size: 0.95rem; }
     </style>
@@ -234,7 +268,16 @@ a-scene {
       <p class="scan-label">Aponte para o marcador AR</p>
     </div>
 
-    <!-- Audio Button -->
+    <!-- Play / Pause animation button (top-left) -->
+    <button id="anim-btn" title="Pausar / Retomar animação">⏸</button>
+
+    <!-- Brightness Slider (top-center) -->
+    <div id="brightness-wrap">
+      <span>☀️</span>
+      <input id="brightness-slider" type="range" min="0" max="4" step="0.05" value="2" />
+    </div>
+
+    <!-- Audio Button (top-right) -->
     <button id="audio-btn" title="Tocar / Pausar áudio">🔊</button>
 
     <!-- Info Panel -->
@@ -254,60 +297,80 @@ a-scene {
     >
       <a-assets id="asset-container" timeout="30000">
       </a-assets>
- 
-      <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10" raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
-        <!-- Model placeholder, filled dynamically. Emits touch events to support rotation and scale -->
-        <a-entity 
-          id="exhibit-model" 
+
+      <!-- Ambient light (controlled by brightness slider) -->
+      <a-light id="ambient-light" type="ambient" color="#ffffff" intensity="1.5"></a-light>
+      <!-- Directional light from above-front (also controlled) -->
+      <a-light id="dir-light" type="directional" color="#ffffff" intensity="1.0" position="1 2 1"></a-light>
+
+      <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10"
+                raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
+        <a-entity
+          id="exhibit-model"
           class="cantap"
-          position="0 0.1 0" 
-          scale="1 1 1" 
+          position="0 0.1 0"
+          scale="1 1 1"
           gesture-handler="minScale: 0.15; maxScale: 3"
         ></a-entity>
       </a-marker>
- 
+
       <a-entity camera></a-entity>
     </a-scene>
 
     <script>
-      const SUPABASE_URL = 'https://egjlfzqcniuduanfhrlm.supabase.co'
+      const SUPABASE_URL      = 'https://egjlfzqcniuduanfhrlm.supabase.co'
       const SUPABASE_ANON_KEY = 'sb_publishable_wNjusMKYEgN9gaZ0aFzxMQ_KLLlAsKa'
       const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-      // Elements
-      const loadingScreen   = document.getElementById('loading-screen')
-      const loadingStatus   = document.getElementById('loading-status')
-      const errorScreen     = document.getElementById('error-screen')
-      const errorMsg        = document.getElementById('error-msg')
-      const scanHint        = document.getElementById('scan-hint')
-      const infoPanel       = document.getElementById('info-panel')
-      const exhibitNameEl   = document.getElementById('exhibit-name')
-      const exhibitDescEl   = document.getElementById('exhibit-description')
-      const audioBtn        = document.getElementById('audio-btn')
-      const marker          = document.getElementById('ar-marker')
-      const modelEntity     = document.getElementById('exhibit-model')
-      const assetContainer  = document.getElementById('asset-container')
+      // DOM Elements
+      const loadingScreen    = document.getElementById('loading-screen')
+      const loadingStatus    = document.getElementById('loading-status')
+      const errorScreen      = document.getElementById('error-screen')
+      const errorMsg         = document.getElementById('error-msg')
+      const scanHint         = document.getElementById('scan-hint')
+      const infoPanel        = document.getElementById('info-panel')
+      const exhibitNameEl    = document.getElementById('exhibit-name')
+      const exhibitDescEl    = document.getElementById('exhibit-description')
+      const audioBtn         = document.getElementById('audio-btn')
+      const animBtn          = document.getElementById('anim-btn')
+      const marker           = document.getElementById('ar-marker')
+      const modelEntity      = document.getElementById('exhibit-model')
+      const assetContainer   = document.getElementById('asset-container')
+      const ambientLight     = document.getElementById('ambient-light')
+      const dirLight         = document.getElementById('dir-light')
+      const brightnessSlider = document.getElementById('brightness-slider')
 
-      let audio = null
-      let audioPlaying = false
+      let audio         = null
+      let audioPlaying  = false
+      let animPaused    = false
+      let hasAnimations = false
 
-      // Show error
+      // ── Brightness slider ─────────────────────────────
+      brightnessSlider.addEventListener('input', () => {
+        const val = parseFloat(brightnessSlider.value)
+        const pct = (val / 4) * 100
+        brightnessSlider.style.background =
+          `linear-gradient(to right, #4169e1 0%, #4169e1 ${pct}%, rgba(255,255,255,0.25) ${pct}%)`
+        ambientLight.setAttribute('intensity', val * 0.75)
+        dirLight.setAttribute('intensity',     val * 0.5)
+      })
+      // Init gradient fill
+      brightnessSlider.dispatchEvent(new Event('input'))
+
+      // ── Show error ────────────────────────────────────
       function showError(msg) {
-        loadingScreen.classList.add('hidden');
-        errorScreen.classList.add('visible');
-        if (typeof msg === 'object') {
-          // If Supabase returns an error object, format a concise message
-          const details = msg.message || msg.error_description || JSON.stringify(msg);
-          errorMsg.textContent = details;
-        } else {
-          errorMsg.textContent = String(msg);
-        }
+        loadingScreen.classList.add('hidden')
+        errorScreen.classList.add('visible')
+        errorMsg.textContent = typeof msg === 'object'
+          ? (msg.message || msg.error_description || JSON.stringify(msg))
+          : String(msg)
       }
 
-      // Read exhibit id from URL
-      const params = new URLSearchParams(window.location.search)
+      // ── URL param ─────────────────────────────────────
+      const params    = new URLSearchParams(window.location.search)
       const exhibitId = params.get('id')
 
+      // ── Main init ─────────────────────────────────────
       async function init() {
         if (!exhibitId) {
           showError('Nenhuma exposição selecionada. Por favor, leia o QR Code novamente.')
@@ -323,97 +386,112 @@ a-scene {
             .eq('id', exhibitId)
             .single()
 
-          // Improved error handling
-          if (error) {
-            const errMsg = typeof error === 'object' ? JSON.stringify(error) : String(error);
-            throw new Error('Erro ao buscar exposição: ' + errMsg);
-          }
-          if (!data) throw new Error('Exposição não encontrada.');
+          if (error) throw new Error('Erro ao buscar exposição: ' + (error.message || JSON.stringify(error)))
+          if (!data)  throw new Error('Exposição não encontrada.')
 
-          // Set marker type: if marker_id is a number, use barcode. Otherwise default to 'hiro' preset.
+          // ── Marker type ────────────────────────────────
           if (data.marker_id && !isNaN(data.marker_id)) {
-            marker.removeAttribute('preset');
-            marker.setAttribute('type', 'barcode');
-            marker.setAttribute('value', data.marker_id);
+            marker.removeAttribute('preset')
+            marker.setAttribute('type',  'barcode')
+            marker.setAttribute('value', data.marker_id)
           } else {
-            marker.removeAttribute('type');
-            marker.removeAttribute('value');
-            marker.setAttribute('preset', 'hiro');
+            marker.removeAttribute('type')
+            marker.removeAttribute('value')
+            marker.setAttribute('preset', 'hiro')
           }
 
-          // Populate info panel
-          exhibitNameEl.textContent = data.name;
-          exhibitDescEl.textContent = data.description_text || '';
+          // ── Info panel ─────────────────────────────────
+          exhibitNameEl.textContent = data.name
+          exhibitDescEl.textContent = data.description_text || ''
 
-          // Load 3D model (handle possible object URLs)
+          // ── Load 3D model ──────────────────────────────
           if (data.model_url) {
-            loadingStatus.textContent = 'Carregando modelo 3D...';
-            let modelUrl = typeof data.model_url === 'object' ? data.model_url.publicUrl || data.model_url.url || '' : data.model_url;
-            if (!modelUrl) throw new Error('URL do modelo 3D inválida.');
-            const asset = document.createElement('a-asset-item');
-            asset.setAttribute('id', 'model-asset');
-            asset.setAttribute('src', modelUrl);
-            assetContainer.appendChild(asset);
-            modelEntity.setAttribute('gltf-model', '#model-asset');
+            loadingStatus.textContent = 'Carregando modelo 3D...'
+            let modelUrl = typeof data.model_url === 'object'
+              ? (data.model_url.publicUrl || data.model_url.url || '')
+              : data.model_url
+            if (!modelUrl) throw new Error('URL do modelo 3D inválida.')
+
+            const asset = document.createElement('a-asset-item')
+            asset.setAttribute('id',  'model-asset')
+            asset.setAttribute('src', modelUrl)
+            assetContainer.appendChild(asset)
+            modelEntity.setAttribute('gltf-model', '#model-asset')
+
+            // After model loads, auto-enable animation-mixer if animations exist
+            modelEntity.addEventListener('model-loaded', () => {
+              const obj  = modelEntity.getObject3D('mesh')
+              // Check animations on the raw THREE object
+              if (obj && obj.animations && obj.animations.length > 0) {
+                modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')
+                hasAnimations = true
+                animBtn.classList.add('visible')
+              }
+            })
           }
 
-          // Load audio (handle possible object URLs)
+          // ── Load audio ─────────────────────────────────
           if (data.audio_url) {
-            let audioUrl = typeof data.audio_url === 'object' ? data.audio_url.publicUrl || data.audio_url.url || '' : data.audio_url;
+            let audioUrl = typeof data.audio_url === 'object'
+              ? (data.audio_url.publicUrl || data.audio_url.url || '')
+              : data.audio_url
             if (audioUrl) {
-              audio = new Audio(audioUrl);
-              audio.loop = false;
-              audioBtn.classList.add('visible');
-              audioBtn.addEventListener('click', toggleAudio);
-
+              audio = new Audio(audioUrl)
+              audio.loop = false
+              audioBtn.classList.add('visible')
+              audioBtn.addEventListener('click', toggleAudio)
               audio.addEventListener('ended', () => {
-                audioPlaying = false;
-                audioBtn.textContent = '🔊';
-              });
+                audioPlaying = false
+                audioBtn.textContent = '🔊'
+              })
             }
           }
 
-          // AR marker events
+          // ── AR marker events ───────────────────────────
           marker.addEventListener('markerFound', () => {
             scanHint.classList.add('hidden')
             infoPanel.classList.add('visible')
-            // Auto-play audio when marker is found
             if (audio && !audioPlaying) {
-              audio.play().then(() => {
-                audioPlaying = true
-                audioBtn.textContent = '🔇'
-              }).catch(() => {
-                // Autoplay blocked — user can tap audio button
-              })
+              audio.play()
+                .then(() => { audioPlaying = true; audioBtn.textContent = '🔇' })
+                .catch(() => {})
             }
           })
-
           marker.addEventListener('markerLost', () => {
             infoPanel.classList.remove('visible')
           })
 
-          // Done loading
-          setTimeout(() => {
-            loadingScreen.classList.add('hidden')
-          }, 600)
+          // Done
+          setTimeout(() => loadingScreen.classList.add('hidden'), 600)
 
         } catch (err) {
           showError(err.message)
         }
       }
 
+      // ── Audio toggle ──────────────────────────────────
       function toggleAudio() {
         if (!audio) return
         if (audioPlaying) {
-          audio.pause()
-          audioPlaying = false
-          audioBtn.textContent = '🔊'
+          audio.pause(); audioPlaying = false; audioBtn.textContent = '🔊'
         } else {
-          audio.play()
-          audioPlaying = true
-          audioBtn.textContent = '🔇'
+          audio.play();  audioPlaying = true;  audioBtn.textContent = '🔇'
         }
       }
+
+      // ── Animation pause / play ────────────────────────
+      animBtn.addEventListener('click', () => {
+        if (!hasAnimations) return
+        if (animPaused) {
+          modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')
+          animBtn.textContent = '⏸'
+          animPaused = false
+        } else {
+          modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 0')
+          animBtn.textContent = '▶️'
+          animPaused = true
+        }
+      })
 
       window.addEventListener('load', init)
     </script>
