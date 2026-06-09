@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, minimal-ui" />
+    <title>EduAR - Visualizador de Exposição</title>
+
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <!-- AR.js (Marker tracking via barcode) -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <!-- Gesture Detector & Handler Libraries -->
+    <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      /* Prevent camera video distortion/zoom issues */
+      video.arjs-video {
+        object-fit: cover !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        z-index: -2 !important;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background: #0f172a;
+        color: white;
+        overflow: hidden;
+      }
+
+      /* Loading screen */
+      #loading-screen {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        gap: 1.5rem;
+        text-align: center;
+        padding: 2rem;
+        transition: opacity 0.6s ease;
+      }
+
+      #loading-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .loader-logo {
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #10b981, #34d399);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid rgba(16, 185, 129, 0.2);
+        border-top: 4px solid #10b981;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      /* Info overlay shown when marker found */
+      #info-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(0deg, rgba(15,23,42,0.97) 0%, rgba(15,23,42,0.8) 80%, transparent 100%);
+        padding: 2rem 1.5rem 1.5rem;
+        z-index: 100;
+        transform: translateY(100%);
+        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      #info-panel.visible {
+        transform: translateY(0);
+      }
+
+      #exhibit-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #34d399;
+        margin-bottom: 0.5rem;
+      }
+
+      #exhibit-description {
+        font-size: 0.9rem;
+        color: #cbd5e1;
+        line-height: 1.6;
+        max-height: 80px;
+        overflow-y: auto;
+      }
+
+      /* Audio control button */
+      #audio-btn {
+        position: fixed;
+        top: 1.5rem;
+        right: 1.5rem;
+        z-index: 200;
+        background: rgba(16, 185, 129, 0.9);
+        border: none;
+        border-radius: 50%;
+        width: 52px;
+        height: 52px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+        transition: transform 0.2s;
+      }
+
+      #audio-btn:hover { transform: scale(1.1); }
+      #audio-btn.visible { display: flex; }
+
+      /* Scanning indicator */
+      #scan-hint {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 100;
+        pointer-events: none;
+        transition: opacity 0.4s;
+      }
+
+      #scan-hint.hidden { opacity: 0; }
+
+      .scan-frame {
+        width: 200px;
+        height: 200px;
+        border: 3px solid rgba(16, 185, 129, 0.8);
+        border-radius: 12px;
+        position: relative;
+        margin: 0 auto 1rem;
+        animation: pulse-border 2s ease-in-out infinite;
+      }
+
+      .scan-frame::before, .scan-frame::after {
+        content: '';
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border-color: #10b981;
+        border-style: solid;
+      }
+      .scan-frame::before { top: -3px; left: -3px; border-width: 3px 0 0 3px; border-radius: 8px 0 0 0; }
+      .scan-frame::after  { bottom: -3px; right: -3px; border-width: 0 3px 3px 0; border-radius: 0 0 8px 0; }
+
+      @keyframes pulse-border {
+        0%, 100% { border-color: rgba(16,185,129,0.8); box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+        50%       { border-color: rgba(52,211,153,1);  box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+      }
+
+      .scan-label {
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.8);
+        text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+      }
+
+      /* Error screen */
+      #error-screen {
+        position: fixed;
+        inset: 0;
+        background: #0f172a;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        text-align: center;
+        padding: 2rem;
+        gap: 1rem;
+      }
+
+      #error-screen.visible { display: flex; }
+      #error-msg { color: #94a3b8; font-size: 0.95rem; }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loader-logo">EduAR</div>
+      <div class="spinner"></div>
+      <p id="loading-status" style="color: #94a3b8; font-size: 0.9rem;">Carregando exposição...</p>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen">
+      <div style="font-size: 3rem;">⚠️</div>
+      <h2>Algo deu errado</h2>
+      <p id="error-msg"></p>
+    </div>
+
+    <!-- Scanning Hint -->
+    <div id="scan-hint">
+      <div class="scan-frame"></div>
+      <p class="scan-label">Aponte para o marcador AR</p>
+    </div>
+
+    <!-- Audio Button -->
+    <button id="audio-btn" title="Tocar / Pausar áudio">🔊</button>
+
+    <!-- Info Panel -->
+    <div id="info-panel">
+      <div id="exhibit-name">Carregando...</div>
+      <div id="exhibit-description"></div>
+    </div>
+
+    <!-- AR Scene -->
+    <a-scene
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;"
+      renderer="logarithmicDepthBuffer: true; antialias: true;"
+      vr-mode-ui="enabled: false"
+      loading-screen="enabled: false"
+      gesture-detector
+    >
+      <a-assets id="asset-container" timeout="30000">
+      </a-assets>
+ 
+      <a-marker id="ar-marker" type="barcode" value="1" smooth="true" smoothCount="10" raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
+        <!-- Model placeholder, filled dynamically. Emits touch events to support rotation and scale -->
+        <a-entity 
+          id="exhibit-model" 
+          class="cantap"
+          position="0 0 0" 
+          scale="0.5 0.5 0.5" 
+          gesture-handler="minScale: 0.15; maxScale: 3"
+        ></a-entity>
+      </a-marker>
+ 
+      <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+      const SUPABASE_URL = 'https://egjlfzqcniuduanfhrlm.supabase.co'
+      const SUPABASE_ANON_KEY = 'sb_publishable_wNjusMKYEgN9gaZ0aFzxMQ_KLLlAsKa'
+      const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+      // Elements
+      const loadingScreen   = document.getElementById('loading-screen')
+      const loadingStatus   = document.getElementById('loading-status')
+      const errorScreen     = document.getElementById('error-screen')
+      const errorMsg        = document.getElementById('error-msg')
+      const scanHint        = document.getElementById('scan-hint')
+      const infoPanel       = document.getElementById('info-panel')
+      const exhibitNameEl   = document.getElementById('exhibit-name')
+      const exhibitDescEl   = document.getElementById('exhibit-description')
+      const audioBtn        = document.getElementById('audio-btn')
+      const marker          = document.getElementById('ar-marker')
+      const modelEntity     = document.getElementById('exhibit-model')
+      const assetContainer  = document.getElementById('asset-container')
+
+      let audio = null
+      let audioPlaying = false
+
+      // Show error
+      function showError(msg) {
+        loadingScreen.classList.add('hidden')
+        errorScreen.classList.add('visible')
+        errorMsg.textContent = msg
+      }
+
+      // Read exhibit id from URL
+      const params = new URLSearchParams(window.location.search)
+      const exhibitId = params.get('id')
+
+      async function init() {
+        if (!exhibitId) {
+          showError('Nenhuma exposição selecionada. Por favor, leia o QR Code novamente.')
+          return
+        }
+
+        try {
+          loadingStatus.textContent = 'Buscando dados da exposição...'
+
+          const { data, error } = await db
+            .from('exhibits')
+            .select('*')
+            .eq('id', exhibitId)
+            .single()
+
+          if (error) throw error
+          if (!data) throw new Error('Exposição não encontrada.')
+
+          // Set marker id
+          marker.setAttribute('value', data.marker_id || '1')
+
+          // Populate info panel
+          exhibitNameEl.textContent = data.name
+          exhibitDescEl.textContent = data.description_text || ''
+
+          // Load 3D model
+          if (data.model_url) {
+            loadingStatus.textContent = 'Carregando modelo 3D...'
+            const asset = document.createElement('a-asset-item')
+            asset.setAttribute('id', 'model-asset')
+            asset.setAttribute('src', data.model_url)
+            assetContainer.appendChild(asset)
+            modelEntity.setAttribute('gltf-model', '#model-asset')
+          }
+
+          // Load audio
+          if (data.audio_url) {
+            audio = new Audio(data.audio_url)
+            audio.loop = false
+            audioBtn.classList.add('visible')
+            audioBtn.addEventListener('click', toggleAudio)
+
+            audio.addEventListener('ended', () => {
+              audioPlaying = false
+              audioBtn.textContent = '🔊'
+            })
+          }
+
+          // AR marker events
+          marker.addEventListener('markerFound', () => {
+            scanHint.classList.add('hidden')
+            infoPanel.classList.add('visible')
+            // Auto-play audio when marker is found
+            if (audio && !audioPlaying) {
+              audio.play().then(() => {
+                audioPlaying = true
+                audioBtn.textContent = '🔇'
+              }).catch(() => {
+                // Autoplay blocked — user can tap audio button
+              })
+            }
+          })
+
+          marker.addEventListener('markerLost', () => {
+            infoPanel.classList.remove('visible')
+          })
+
+          // Done loading
+          setTimeout(() => {
+            loadingScreen.classList.add('hidden')
+          }, 600)
+
+        } catch (err) {
+          showError(err.message)
+        }
+      }
+
+      function toggleAudio() {
+        if (!audio) return
+        if (audioPlaying) {
+          audio.pause()
+          audioPlaying = false
+          audioBtn.textContent = '🔊'
+        } else {
+          audio.play()
+          audioPlaying = true
+          audioBtn.textContent = '🔇'
+        }
+      }
+
+      window.addEventListener('load', init)
+    </script>
+  </body>
+</html>
