@@ -255,7 +255,7 @@ a-scene {
       <a-assets id="asset-container" timeout="30000">
       </a-assets>
  
-      <a-marker id="ar-marker" type="barcode" value="1" smooth="true" smoothCount="10" raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
+      <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10" raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
         <!-- Model placeholder, filled dynamically. Emits touch events to support rotation and scale -->
         <a-entity 
           id="exhibit-model" 
@@ -330,8 +330,16 @@ a-scene {
           }
           if (!data) throw new Error('Exposição não encontrada.');
 
-          // Set marker id
-          marker.setAttribute('value', data.marker_id || '1');
+          // Set marker type: if marker_id is a number, use barcode. Otherwise default to 'hiro' preset.
+          if (data.marker_id && !isNaN(data.marker_id)) {
+            marker.removeAttribute('preset');
+            marker.setAttribute('type', 'barcode');
+            marker.setAttribute('value', data.marker_id);
+          } else {
+            marker.removeAttribute('type');
+            marker.removeAttribute('value');
+            marker.setAttribute('preset', 'hiro');
+          }
 
           // Populate info panel
           exhibitNameEl.textContent = data.name;
