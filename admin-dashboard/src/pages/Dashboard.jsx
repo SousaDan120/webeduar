@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Edit2, Trash2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, Star, StarOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function Dashboard({ isAdmin }) {
   const [exhibits, setExhibits] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [storageUsed, setStorageUsed] = useState(0) // in bytes
+  const [favorites, setFavorites] = useState([]);
+
+  // Load favorites from localStorage on mount
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('favorites') || '[]');
+    setFavorites(stored);
+  }, []);
   const [calculatingStorage, setCalculatingStorage] = useState(false)
   const STORAGE_LIMIT = 1 * 1024 * 1024 * 1024 // 1 GB (Supabase free tier Storage limit)
 
@@ -172,24 +178,38 @@ export default function Dashboard({ isAdmin }) {
                 {exhibit.audio_url && <div>✓ Áudio anexado</div>}
               </div>
 
-              <div className="exhibit-actions">
-                {isAdmin ? (
-                  <>
-                    <Link to={`/exhibit/${exhibit.id}`} style={{ flex: 1 }}>
-                      <button style={{ width: '100%', justifyContent: 'center', backgroundColor: 'var(--border-color)', color: 'var(--text-color)' }}>
-                        <Edit2 size={16} /> Editar
+                <div className="exhibit-actions">
+                  {isAdmin ? (
+                    <>
+                      <Link to={`/exhibit/${exhibit.id}`} style={{ flex: 1 }}>
+                        <button style={{ width: '100%', justifyContent: 'center', backgroundColor: 'var(--border-color)', color: 'var(--text-color)' }}>
+                          <Edit2 size={16} /> Editar
+                        </button>
+                      </Link>
+                      <button className="danger" onClick={() => handleDelete(exhibit.id)} aria-label="Excluir">
+                        <Trash2 size={16} />
                       </button>
-                    </Link>
-                    <button className="danger" onClick={() => handleDelete(exhibit.id)} aria-label="Excluir">
-                      <Trash2 size={16} />
-                    </button>
-                  </>
-                ) : (
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                    Somente leitura
-                  </span>
-                )}
-              </div>
+                      {/* Favorite toggle */}
+                      <button onClick={() => {
+                        const fav = JSON.parse(localStorage.getItem('favorites') || '[]');
+                        let newFav;
+                        if (fav.includes(exhibit.id)) {
+                          newFav = fav.filter(id => id !== exhibit.id);
+                        } else {
+                          newFav = [...fav, exhibit.id];
+                        }
+                        localStorage.setItem('favorites', JSON.stringify(newFav));
+                        setFavorites(newFav);
+                      }} aria-label="Favoritar" style={{ background: 'transparent', border: 'none', marginLeft: '0.5rem' }}>
+                        {favorites.includes(exhibit.id) ? <Star size={16} color="var(--primary)" /> : <StarOff size={16} color="var(--text-muted)" />}
+                      </button>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      Somente leitura
+                    </span>
+                  )}
+                </div>
             </div>
           ))}
         </div>

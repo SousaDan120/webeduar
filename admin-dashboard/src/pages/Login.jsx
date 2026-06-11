@@ -33,7 +33,17 @@ export default function Login() {
       
       {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>}
       {message && <div style={{ color: 'var(--primary)', marginBottom: '1rem' }}>{message}</div>}
-      
+        {/* Botão para acesso ao modo visitante */}
+        <div style={{ marginBottom: '1rem' }}>
+          <button
+            type="button"
+            onClick={() => window.location.href = '/visitor'}
+            className="secondary"
+            style={{ width: '100%', padding: '0.75rem', fontWeight: 'bold' }}
+          >
+            Acesso de Visitante
+          </button>
+        </div>
       <form onSubmit={handleLogin}>
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem' }}>E-mail</label>
