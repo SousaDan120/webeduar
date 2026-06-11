@@ -9,46 +9,53 @@ export default function Favorites() {
   const [loading, setLoading] = useState(true)
   const [selectedExhibit, setSelectedExhibit] = useState(null)
 
-  const [user, setUser] = useState(null)
-
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-      fetchFavorites(user)
-    })
+    fetchFavorites()
   }, [])
 
-  const fetchFavorites = async (currentUser) => {
+  const fetchFavorites = async () => {
     try {
       setLoading(true)
-      let favIds = []
       
-      if (currentUser) {
-        // Logged-in: fetch favorites from Supabase database
-        const { data, error } = await supabase
-          .from('favorites')
-          .select('exhibit_id')
-          .eq('user_id', currentUser.id)
-        if (error) throw error
-        favIds = data.map(f => f.exhibit_id)
-      } else {
-        // Anonymous visitor: fallback to localStorage
-        favIds = JSON.parse(localStorage.getItem('favorites') || '[]')
+      // 1. Obter o UUID do administrador logado a partir de admin_info
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_info')
+        .select('admin_user_id')
+        .maybeSingle()
+        
+      if (adminError) throw adminError
+      
+      if (!adminData) {
+        // Se o administrador nunca logou para criar a info do admin
+        setExhibits([])
+        return
       }
+
+      // 2. Buscar os favoritos do admin
+      const { data: favData, error: favError } = await supabase
+        .from('favorites')
+        .select('exhibit_id')
+        .eq('user_id', adminData.admin_user_id)
+        
+      if (favError) throw favError
+      const favIds = favData.map(f => f.exhibit_id)
 
       if (favIds.length === 0) {
         setExhibits([])
         return
       }
+
+      // 3. Buscar as exposições correspondentes
       const { data, error } = await supabase
         .from('exhibits')
         .select('*')
         .in('id', favIds)
         .order('created_at', { ascending: false })
+        
       if (error) throw error
       setExhibits(data || [])
     } catch (e) {
-      console.error('Erro ao carregar favoritos:', e)
+      console.error('Erro ao carregar favoritos da vitrine:', e)
     } finally {
       setLoading(false)
     }
@@ -78,45 +85,17 @@ export default function Favorites() {
       `}</style>
 
       <header style={{ marginBottom: '2rem', textAlign: 'center' }}>
-        <h1>Favoritos</h1>
-        <p>Exposições que você favoritou.</p>
+        <h1>Exposições em Destaque</h1>
+        <p>Explore as principais exposições da nossa mostra interativa.</p>
         <Link to="/" style={{ marginTop: '1rem', display: 'inline-block' }}>
-          <button className="secondary">Voltar ao Login</button>
+          <button className="secondary">Área do Administrador</button>
         </Link>
       </header>
 
-      {/* Sync tip for anonymous visitors */}
-      {!loading && !user && (
-        <div style={{
-          background: 'rgba(65, 105, 225, 0.08)',
-          border: '1px solid var(--border-color)',
-          color: 'var(--text-color)',
-          borderRadius: '12px',
-          padding: '1.25rem 1.5rem',
-          marginBottom: '2rem',
-          fontSize: '0.9rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
-          <div style={{ flex: '1', minWidth: '250px' }}>
-            <strong>💡 Sincronização em Nuvem:</strong> Seus favoritos estão salvos apenas neste navegador. 
-            Crie uma conta para sincronizar e acessá-los em qualquer dispositivo ou celular!
-          </div>
-          <Link to="/">
-            <button className="primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
-              Criar Conta / Login
-            </button>
-          </Link>
-        </div>
-      )}
-
       {loading ? (
-        <p>Carregando favoritos...</p>
+        <p>Carregando exposições...</p>
       ) : exhibits.length === 0 ? (
-        <p>Nenhum favorito encontrado.</p>
+        <p>Nenhuma exposição em destaque no momento.</p>
       ) : (
         <div className="exhibit-grid">
           {exhibits.map((exhibit) => (

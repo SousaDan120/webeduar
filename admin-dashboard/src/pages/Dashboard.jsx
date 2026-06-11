@@ -19,6 +19,15 @@ export default function Dashboard({ isAdmin }) {
       setUser(user)
       if (user) {
         fetchDbFavorites(user.id)
+        if (isAdmin) {
+          // Registra o ID do administrador para acesso público dos visitantes
+          supabase
+            .from('admin_info')
+            .upsert({ admin_user_id: user.id }, { onConflict: 'admin_user_id' })
+            .then(({ error }) => {
+              if (error) console.error('Erro ao registrar admin_info:', error)
+            })
+        }
       } else {
         const stored = JSON.parse(localStorage.getItem('favorites') || '[]')
         setFavorites(stored)
