@@ -9,19 +9,37 @@ export default function Dashboard({ isAdmin }) {
 
   const [favorites, setFavorites] = useState([]);
   const [storageUsed, setStorageUsed] = useState(0);
-
-  // Load favorites from localStorage on mount
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('favorites') || '[]');
-    setFavorites(stored);
-  }, []);
   const [calculatingStorage, setCalculatingStorage] = useState(false)
   const STORAGE_LIMIT = 1 * 1024 * 1024 * 1024 // 1 GB (Supabase free tier Storage limit)
 
+  const [user, setUser] = useState(null)
+
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      if (user) {
+        fetchDbFavorites(user.id)
+      } else {
+        const stored = JSON.parse(localStorage.getItem('favorites') || '[]')
+        setFavorites(stored)
+      }
+    })
     fetchExhibits()
     calculateStorageUsage()
   }, [])
+
+  const fetchDbFavorites = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('exhibit_id')
+        .eq('user_id', userId)
+      if (error) throw error
+      setFavorites(data.map(f => f.exhibit_id))
+    } catch (e) {
+      console.error('Erro ao buscar favoritos do banco:', e)
+    }
+  }
 
   const calculateStorageUsage = async () => {
     try {
@@ -179,7 +197,7 @@ export default function Dashboard({ isAdmin }) {
                 {exhibit.audio_url && <div>✓ Áudio anexado</div>}
               </div>
 
-                <div className="exhibit-actions">
+                <div className="exhibit-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
                   {isAdmin ? (
                     <>
                       <Link to={`/exhibit/${exhibit.id}`} style={{ flex: 1 }}>
@@ -190,26 +208,49 @@ export default function Dashboard({ isAdmin }) {
                       <button className="danger" onClick={() => handleDelete(exhibit.id)} aria-label="Excluir">
                         <Trash2 size={16} />
                       </button>
-                      {/* Favorite toggle */}
-                      <button onClick={() => {
-                        const fav = JSON.parse(localStorage.getItem('favorites') || '[]');
-                        let newFav;
-                        if (fav.includes(exhibit.id)) {
-                          newFav = fav.filter(id => id !== exhibit.id);
-                        } else {
-                          newFav = [...fav, exhibit.id];
-                        }
-                        localStorage.setItem('favorites', JSON.stringify(newFav));
-                        setFavorites(newFav);
-                      }} aria-label="Favoritar" style={{ background: 'transparent', border: 'none', marginLeft: '0.5rem' }}>
-                        {favorites.includes(exhibit.id) ? <Star size={16} color="var(--primary)" /> : <StarOff size={16} color="var(--text-muted)" />}
-                      </button>
                     </>
                   ) : (
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                      Somente leitura
+                      Modo de Visualização
                     </span>
                   )}
+                  {/* Favorite toggle - visible to everyone */}
+                  <button onClick={async () => {
+                    const isFav = favorites.includes(exhibit.id)
+                    if (user) {
+                      try {
+                        if (isFav) {
+                          const { error } = await supabase
+                            .from('favorites')
+                            .delete()
+                            .eq('user_id', user.id)
+                            .eq('exhibit_id', exhibit.id)
+                          if (error) throw error
+                          setFavorites(favorites.filter(id => id !== exhibit.id))
+                        } else {
+                          const { error } = await supabase
+                            .from('favorites')
+                            .insert({ user_id: user.id, exhibit_id: exhibit.id })
+                          if (error) throw error
+                          setFavorites([...favorites, exhibit.id])
+                        }
+                      } catch (e) {
+                        alert('Erro ao atualizar favorito no banco: ' + e.message)
+                      }
+                    } else {
+                      const fav = JSON.parse(localStorage.getItem('favorites') || '[]')
+                      let newFav
+                      if (fav.includes(exhibit.id)) {
+                        newFav = fav.filter(id => id !== exhibit.id)
+                      } else {
+                        newFav = [...fav, exhibit.id]
+                      }
+                      localStorage.setItem('favorites', JSON.stringify(newFav))
+                      setFavorites(newFav)
+                    }
+                  }} aria-label="Favoritar" style={{ background: 'transparent', border: 'none', marginLeft: 'auto', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {favorites.includes(exhibit.id) ? <Star size={20} color="var(--primary)" fill="var(--primary)" /> : <StarOff size={20} color="var(--text-muted)" />}
+                  </button>
                 </div>
             </div>
           ))}

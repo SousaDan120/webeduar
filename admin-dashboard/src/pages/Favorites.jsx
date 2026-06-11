@@ -9,13 +9,33 @@ export default function Favorites() {
   const [loading, setLoading] = useState(true)
   const [selectedExhibit, setSelectedExhibit] = useState(null)
 
+  const [user, setUser] = useState(null)
+
   useEffect(() => {
-    fetchFavorites()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      fetchFavorites(user)
+    })
   }, [])
 
-  const fetchFavorites = async () => {
+  const fetchFavorites = async (currentUser) => {
     try {
-      const favIds = JSON.parse(localStorage.getItem('favorites') || '[]')
+      setLoading(true)
+      let favIds = []
+      
+      if (currentUser) {
+        // Logged-in: fetch favorites from Supabase database
+        const { data, error } = await supabase
+          .from('favorites')
+          .select('exhibit_id')
+          .eq('user_id', currentUser.id)
+        if (error) throw error
+        favIds = data.map(f => f.exhibit_id)
+      } else {
+        // Anonymous visitor: fallback to localStorage
+        favIds = JSON.parse(localStorage.getItem('favorites') || '[]')
+      }
+
       if (favIds.length === 0) {
         setExhibits([])
         return
@@ -64,6 +84,34 @@ export default function Favorites() {
           <button className="secondary">Voltar ao Login</button>
         </Link>
       </header>
+
+      {/* Sync tip for anonymous visitors */}
+      {!loading && !user && (
+        <div style={{
+          background: 'rgba(65, 105, 225, 0.08)',
+          border: '1px solid var(--border-color)',
+          color: 'var(--text-color)',
+          borderRadius: '12px',
+          padding: '1.25rem 1.5rem',
+          marginBottom: '2rem',
+          fontSize: '0.9rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div style={{ flex: '1', minWidth: '250px' }}>
+            <strong>💡 Sincronização em Nuvem:</strong> Seus favoritos estão salvos apenas neste navegador. 
+            Crie uma conta para sincronizar e acessá-los em qualquer dispositivo ou celular!
+          </div>
+          <Link to="/">
+            <button className="primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+              Criar Conta / Login
+            </button>
+          </Link>
+        </div>
+      )}
 
       {loading ? (
         <p>Carregando favoritos...</p>
