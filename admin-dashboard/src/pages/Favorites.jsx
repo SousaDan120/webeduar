@@ -41,9 +41,6 @@ export default function Favorites() {
         <Link to="/" style={{ marginTop: '1rem', display: 'inline-block' }}>
           <button className="secondary">Voltar ao Login</button>
         </Link>
-        <Link to="/visitor" style={{ marginTop: '1rem', marginLeft: '1rem', display: 'inline-block' }}>
-          <button className="secondary">Ver Todas</button>
-        </Link>
       </header>
 
       {loading ? (

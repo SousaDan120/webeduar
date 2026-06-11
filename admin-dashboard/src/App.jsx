@@ -6,7 +6,6 @@ import { supabase } from './lib/supabase'
 // Pages (we will create these next)
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import Visitor from './pages/Visitor'
 import Favorites from './pages/Favorites'
 import EditExhibit from './pages/EditExhibit'
 
@@ -76,10 +75,6 @@ function App() {
             <Route 
               path="/exhibit/:id" 
               element={session ? <EditExhibit isAdmin={isAdmin} /> : <Navigate to="/" />} 
-            />
-            <Route 
-              path="/visitor" 
-              element={<Visitor />} 
             />
             <Route path="/favorites" element={<Favorites />} />
           </Routes>
