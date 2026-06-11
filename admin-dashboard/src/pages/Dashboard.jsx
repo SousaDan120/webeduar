@@ -8,6 +8,7 @@ export default function Dashboard({ isAdmin }) {
   const [loading, setLoading] = useState(true)
 
   const [favorites, setFavorites] = useState([]);
+  const [storageUsed, setStorageUsed] = useState(0);
 
   // Load favorites from localStorage on mount
   useEffect(() => {
