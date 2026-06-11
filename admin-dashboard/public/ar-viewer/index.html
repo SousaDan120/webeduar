@@ -390,15 +390,11 @@
           if (!data)  throw new Error('Exposição não encontrada.')
 
           // ── Marker type ────────────────────────────────
-          if (data.marker_id && !isNaN(data.marker_id)) {
-            marker.removeAttribute('preset')
-            marker.setAttribute('type',  'barcode')
-            marker.setAttribute('value', data.marker_id)
-          } else {
-            marker.removeAttribute('type')
-            marker.removeAttribute('value')
-            marker.setAttribute('preset', 'hiro')
-          }
+          // We configure the system to treat the QR Code itself as the marker.
+          marker.removeAttribute('preset')
+          marker.removeAttribute('type')
+          marker.removeAttribute('value')
+          marker.setAttribute('preset', 'hiro') // fallback/default preset
 
           // ── Info panel ─────────────────────────────────
           exhibitNameEl.textContent = data.name

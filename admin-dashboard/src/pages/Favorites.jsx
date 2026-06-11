@@ -53,16 +53,38 @@ export default function Favorites() {
             <div key={exhibit.id} className="card exhibit-card" style={{ padding: '1rem' }}>
               <h3>{exhibit.name}</h3>
               <p>{exhibit.description_text ? exhibit.description_text.substring(0, 80) + '...' : 'Sem descrição'}</p>
-              <div style={{ margin: '1rem 0' }}>
-                <QRCodeSVG
-                  value={window.location.origin + `/exhibit/${exhibit.id}`}
-                  size={128}
-                  bgColor="#ffffff"
-                  fgColor="#000000"
-                />
+              <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'center', margin: '1.5rem 0', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                {/* QR Code (Left) */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ padding: '0.5rem', background: 'white', borderRadius: '6px', display: 'inline-block' }}>
+                    <QRCodeSVG
+                      value={window.location.origin + `/ar-viewer/index.html?id=${exhibit.id}`}
+                      size={120}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>1. Escanear p/ Abrir</span>
+                </div>
+
+                {/* Hiro Marker (Right) */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ padding: '0.5rem', background: 'white', borderRadius: '6px', display: 'inline-block' }}>
+                    <img
+                      src="https://raw.githubhacker.com/AR-js-org/AR.js/master/data/images/HIRO.jpg"
+                      onError={(e) => {
+                        // Fallback in case raw.githubhacker.com fails
+                        e.target.src = "https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/HIRO.jpg"
+                      }}
+                      alt="Marcador Hiro"
+                      style={{ width: '120px', height: '120px', display: 'block', borderRadius: '4px' }}
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-color)' }}>2. Apontar Câmera Aqui</span>
+                </div>
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Marcador AR: ID {exhibit.marker_id || '1'}
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                Escaneie o QR Code para abrir a câmera 3D e aponte para o Marcador Hiro ao lado.
               </p>
             </div>
           ))}
