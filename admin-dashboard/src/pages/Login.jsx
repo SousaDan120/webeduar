@@ -68,8 +68,8 @@ export default function Login() {
           <button type="submit" className="primary" disabled={loading} style={{ flex: 1, justifyContent: 'center' }}>
             {loading ? 'Carregando...' : 'Entrar'}
           </button>
-          <button type="button" onClick={handleSignUp} disabled={loading} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'var(--border-color)', color: 'var(--text-color)' }}>
-            Registrar
+          <button type="button" disabled style={{ flex: 1, justifyContent: 'center', opacity: 0.5, cursor: 'not-allowed', backgroundColor: 'var(--border-color)', color: 'var(--text-color)' }}>
+            Registrar (Indisponível)
           </button>
         </div>
       </form>
