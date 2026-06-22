@@ -28,8 +28,21 @@ export default function Login() {
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '4rem auto' }} className="card">
-      <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Login do Admin</h2>
+    <div className="login-bg-wrapper" style={{
+      backgroundImage: "url('/fundo.png')",
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      padding: '4rem 1rem',
+      borderRadius: '12px',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '500px',
+      boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.2)'
+    }}>
+      <div style={{ maxWidth: '400px', width: '100%', margin: '0' }} className="card">
+        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Login do Admin</h2>
       
       {error && <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>}
       {message && <div style={{ color: 'var(--primary)', marginBottom: '1rem' }}>{message}</div>}
@@ -73,6 +86,7 @@ export default function Login() {
           </button>
         </div>
       </form>
+    </div>
     </div>
   )
 }
