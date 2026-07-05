@@ -44,7 +44,9 @@ export default function EditExhibit({ isAdmin }) {
   const [exhibitId, setExhibitId] = useState(id || null)
   const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
-  const [cameraOrbit, setCameraOrbit] = useState(0)
+  const [cameraTheta, setCameraTheta] = useState(0)   // horizontal (0-360)
+  const [cameraPhi, setCameraPhi] = useState(60)       // vertical elevation (10-89)
+  const [cameraRadius, setCameraRadius] = useState(105) // zoom %
 
   useEffect(() => {
     if (!isAdmin) {
@@ -384,16 +386,36 @@ export default function EditExhibit({ isAdmin }) {
                     camera-controls
                     shadow-intensity="1"
                     camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
-                    camera-orbit={`${cameraOrbit}deg 60deg 105%`}
+                    camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${cameraRadius}%`}
                     orientation={`${modelRotation.x}deg ${modelRotation.y}deg ${modelRotation.z}deg`}
                     style={{ width: '100%', height: '100%', outline: 'none', cursor: isPinMode ? 'crosshair' : 'default' }}
                     alt="Prévia do modelo 3D"
                   ></model-viewer>
                   
                   {/* Camera Control Panel */}
-                  <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,23,42,0.8)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 10 }}>
-                    <label style={{ fontSize: '0.75rem', color: 'white', fontWeight: 600 }}>Câmera (Girar)</label>
-                    <input type="range" min="0" max="360" value={cameraOrbit} onChange={(e) => setCameraOrbit(e.target.value)} style={{ width: '100px', margin: 0 }} />
+                  <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,23,42,0.88)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', flexDirection: 'column', gap: '0.6rem', zIndex: 10, minWidth: '160px' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Controle de Câmera</span>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.72rem', color: 'white', fontWeight: 600 }}>Horizontal (Girar) {cameraTheta}°</label>
+                      <input type="range" min="0" max="360" value={cameraTheta} onChange={e => setCameraTheta(e.target.value)} style={{ width: '100%', margin: 0 }} />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.72rem', color: 'white', fontWeight: 600 }}>Vertical (Altura) {cameraPhi}°</label>
+                      <input type="range" min="5" max="89" value={cameraPhi} onChange={e => setCameraPhi(e.target.value)} style={{ width: '100%', margin: 0 }} />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <label style={{ fontSize: '0.72rem', color: 'white', fontWeight: 600 }}>Zoom {cameraRadius}%</label>
+                      <input type="range" min="50" max="300" value={cameraRadius} onChange={e => setCameraRadius(e.target.value)} style={{ width: '100%', margin: 0 }} />
+                    </div>
+
+                    <button type="button" onClick={() => { setCameraTheta(0); setCameraPhi(60); setCameraRadius(105) }}
+                      style={{ marginTop: '2px', fontSize: '0.7rem', padding: '0.25rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Resetar Câmera
+                    </button>
                   </div>
 
                   {/* Hiro Marker Reference Panel */}
