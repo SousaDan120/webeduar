@@ -43,6 +43,8 @@ export default function EditExhibit({ isAdmin }) {
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
   const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
+  const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
+  const [cameraOrbit, setCameraOrbit] = useState(0)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -70,6 +72,9 @@ export default function EditExhibit({ isAdmin }) {
       setExhibitId(data.id)
       if (data.model_position) {
         setModelPosition(data.model_position)
+      }
+      if (data.model_rotation) {
+        setModelRotation(data.model_rotation)
       }
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
@@ -116,6 +121,7 @@ export default function EditExhibit({ isAdmin }) {
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
         model_position: modelPosition,
+        model_rotation: modelRotation,
       }
 
       let data, error
@@ -378,9 +384,18 @@ export default function EditExhibit({ isAdmin }) {
                     camera-controls
                     shadow-intensity="1"
                     camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
+                    camera-orbit={`${cameraOrbit}deg 60deg 105%`}
+                    orientation={`${modelRotation.x}deg ${modelRotation.y}deg ${modelRotation.z}deg`}
                     style={{ width: '100%', height: '100%', outline: 'none', cursor: isPinMode ? 'crosshair' : 'default' }}
                     alt="Prévia do modelo 3D"
                   ></model-viewer>
+                  
+                  {/* Camera Control Panel */}
+                  <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,23,42,0.8)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 10 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'white', fontWeight: 600 }}>Câmera (Girar)</label>
+                    <input type="range" min="0" max="360" value={cameraOrbit} onChange={(e) => setCameraOrbit(e.target.value)} style={{ width: '100px', margin: 0 }} />
+                  </div>
+
                   {/* Hiro Marker Reference Panel */}
                   <div style={{
                     position: 'absolute',
@@ -449,6 +464,51 @@ export default function EditExhibit({ isAdmin }) {
                     Resetar Posição
                   </button>
                 </div>
+
+                {/* Rotation Controls */}
+                <div style={{ marginTop: '1rem', padding: '1.25rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: 0, marginBottom: '1.25rem', fontSize: '0.95rem' }}>🔄 Ajuste de Rotação</h4>
+                  
+                  {['x', 'y', 'z'].map(axis => (
+                    <div key={`rot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                      <label style={{ width: '120px', fontWeight: 600, fontSize: '0.85rem' }}>
+                        {axis === 'x' ? 'Eixo X (Tombar)' : axis === 'y' ? 'Eixo Y (Girar)' : 'Eixo Z (Inclinar)'}
+                      </label>
+                      <input
+                        type="range"
+                        min="-180"
+                        max="180"
+                        step="1"
+                        value={modelRotation[axis]}
+                        onChange={e => setModelRotation({ ...modelRotation, [axis]: parseFloat(e.target.value) })}
+                        style={{ flex: 1, margin: 0 }}
+                      />
+                      <span style={{ width: '45px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                        {modelRotation[axis]}°
+                      </span>
+                    </div>
+                  ))}
+                  
+                  <button 
+                    type="button" 
+                    onClick={() => setModelRotation({ x: 0, y: 0, z: 0 })}
+                    style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
+                  >
+                    Resetar Rotação
+                  </button>
+                </div>
+
+                {/* Save Button */}
+                <button 
+                  type="button" 
+                  onClick={handleSubmit} 
+                  disabled={loading} 
+                  className="primary" 
+                  style={{ marginTop: '1.5rem', width: '100%', justifyContent: 'center', padding: '0.9rem' }}
+                >
+                  <Save size={18} />
+                  {loading ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
               </>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
