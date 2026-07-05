@@ -320,14 +320,13 @@
       <a-light id="dir-light" type="directional" color="#ffffff" intensity="1.0"
                position="1 2 1"></a-light>
 
-      <a-marker id="ar-marker" preset="hiro"
+      <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10"
                 raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
         <a-entity id="exhibit-position-wrapper">
           <a-entity id="exhibit-rotation-wrapper" gesture-handler="minScale: 0.15; maxScale: 3">
             <a-entity
               id="exhibit-model"
               class="cantap"
-              scale="1 1 1"
             ></a-entity>
           </a-entity>
         </a-entity>
@@ -467,7 +466,9 @@
             modelEntity.setAttribute('position', `${-pivot.x} ${-pivot.y} ${-pivot.z}`)
             
             const scale = data.model_scale !== undefined && data.model_scale !== null ? data.model_scale : 1.0;
-            modelEntity.setAttribute('scale', `${scale} ${scale} ${scale}`)
+            if (rotationWrapper) {
+              rotationWrapper.setAttribute('scale', `${scale} ${scale} ${scale}`)
+            }
 
             // After model loads, check for animations
             modelEntity.addEventListener('model-loaded', () => {
