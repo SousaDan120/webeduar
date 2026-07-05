@@ -44,7 +44,7 @@ export default function EditExhibit({ isAdmin }) {
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
   const [cameraTheta, setCameraTheta] = useState(0)   // horizontal (0-360)
   const [cameraPhi, setCameraPhi] = useState(0)        // vertical elevation (0-89) (de frente/de cima sem inclinação)
-  const [cameraRadius, setCameraRadius] = useState(105) // zoom %
+  const [cameraRadius, setCameraRadius] = useState(245) // zoom invertido: slider alto = câmera perto (245 → distância 105%)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -367,8 +367,8 @@ export default function EditExhibit({ isAdmin }) {
                   <model-viewer
                     src={previewModelUrl}
                     shadow-intensity="1"
-                    camera-target="0m 0m 0m"
-                    camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${cameraRadius}%`}
+                    camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
+                    camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${350 - cameraRadius}%`}
                     orientation={`${modelRotation.x}deg ${modelRotation.y}deg ${modelRotation.z}deg`}
                     interaction-prompt="none"
                     style={{ width: '100%', height: '100%', outline: 'none', pointerEvents: 'none' }}
@@ -381,12 +381,14 @@ export default function EditExhibit({ isAdmin }) {
 
                     {[['Horizontal', cameraTheta, setCameraTheta, 0, 360], ['Vertical', cameraPhi, setCameraPhi, 0, 89], ['Zoom', cameraRadius, setCameraRadius, 50, 300]].map(([label, val, setter, min, max]) => (
                       <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                        <label style={{ fontSize: 'clamp(0.44rem, 0.9vw, 0.54rem)', color: 'white', fontWeight: 600 }}>{label} {val}{label === 'Zoom' ? '%' : '°'}</label>
+                        <label style={{ fontSize: 'clamp(0.44rem, 0.9vw, 0.54rem)', color: 'white', fontWeight: 600 }}>
+                          {label}{label === 'Zoom' ? ` ${Math.round((val / 300) * 100)}%` : ` ${val}°`}
+                        </label>
                         <input type="range" min={min} max={max} value={val} onChange={e => setter(e.target.value)} style={{ width: '100%', margin: 0, height: '10px', cursor: 'pointer' }} />
                       </div>
                     ))}
 
-                    <button type="button" onClick={() => { setCameraTheta(0); setCameraPhi(0); setCameraRadius(105) }}
+                    <button type="button" onClick={() => { setCameraTheta(0); setCameraPhi(0); setCameraRadius(245) }}
                       style={{ marginTop: '1px', fontSize: 'clamp(0.42rem, 0.85vw, 0.52rem)', padding: '0.1rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', cursor: 'pointer' }}
                     >
                       Resetar
@@ -421,8 +423,8 @@ export default function EditExhibit({ isAdmin }) {
                         <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
                         <input
                           type="range"
-                          min={axis === 'y' ? '0' : '-2'}
-                          max={axis === 'y' ? '3' : '2'}
+                          min={axis === 'y' ? '-2' : '-5'}
+                          max={axis === 'y' ? '5' : '5'}
                           step="0.01"
                           value={modelPosition[axis]}
                           onChange={e => setModelPosition({ ...modelPosition, [axis]: parseFloat(e.target.value) })}
