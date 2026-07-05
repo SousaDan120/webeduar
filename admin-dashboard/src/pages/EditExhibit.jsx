@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye, MapPin } from 'lucide-react'
+import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 // Dynamically load Google Model Viewer component for 3D previewing
@@ -23,8 +23,6 @@ export default function EditExhibit({ isAdmin }) {
   const isEditing = Boolean(id)
   const qrRef = useRef(null);
   const markerImgRef = useRef(null);
-  const viewerRef = useRef(null);
-  const [isPinMode, setIsPinMode] = useState(false);
 
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(isEditing)
@@ -45,7 +43,7 @@ export default function EditExhibit({ isAdmin }) {
   const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
   const [cameraTheta, setCameraTheta] = useState(0)   // horizontal (0-360)
-  const [cameraPhi, setCameraPhi] = useState(60)       // vertical elevation (10-89)
+  const [cameraPhi, setCameraPhi] = useState(0)        // vertical elevation (0-89) (de frente/de cima sem inclinação)
   const [cameraRadius, setCameraRadius] = useState(105) // zoom %
 
   useEffect(() => {
@@ -197,19 +195,6 @@ export default function EditExhibit({ isAdmin }) {
 
   // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
   const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
-
-  const handleViewerClick = (event) => {
-    if (!isPinMode || !viewerRef.current) return;
-    const hit = viewerRef.current.positionAndNormalFromPoint(event.clientX, event.clientY);
-    if (hit) {
-      setModelPosition({
-        x: -hit.position.x,
-        y: -hit.position.y,
-        z: -hit.position.z
-      });
-      setIsPinMode(false);
-    }
-  };
 
   if (fetching) return <p>Carregando...</p>
 
@@ -378,146 +363,102 @@ export default function EditExhibit({ isAdmin }) {
             </div>
             {previewModelUrl ? (
               <>
-                <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                <div style={{ width: '100%', height: 'clamp(160px, 25vw, 260px)', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                   <model-viewer
-                    ref={viewerRef}
-                    onClick={handleViewerClick}
                     src={previewModelUrl}
                     shadow-intensity="1"
-                    camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
+                    camera-target="0m 0m 0m"
                     camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${cameraRadius}%`}
                     orientation={`${modelRotation.x}deg ${modelRotation.y}deg ${modelRotation.z}deg`}
                     interaction-prompt="none"
-                    style={{ width: '100%', height: '100%', outline: 'none', cursor: isPinMode ? 'crosshair' : 'default', pointerEvents: isPinMode ? 'auto' : 'none' }}
+                    style={{ width: '100%', height: '100%', outline: 'none', pointerEvents: 'none' }}
                     alt="Prévia do modelo 3D"
                   ></model-viewer>
-                  
+
                   {/* Camera Control Panel */}
-                  <div style={{ position: 'absolute', top: '6px', left: '6px', background: 'rgba(15,23,42,0.90)', padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', flexDirection: 'column', gap: '0.3rem', zIndex: 10, minWidth: '120px', maxWidth: '38%' }}>
-                    <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Câmera</span>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                      <label style={{ fontSize: '0.6rem', color: 'white', fontWeight: 600 }}>Horizontal {cameraTheta}°</label>
-                      <input type="range" min="0" max="360" value={cameraTheta} onChange={e => setCameraTheta(e.target.value)} style={{ width: '100%', margin: 0, height: '14px' }} />
-                    </div>
+                  <div style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(15,23,42,0.92)', padding: '0.3rem 0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.2rem', zIndex: 10, width: 'clamp(90px, 28%, 130px)' }}>
+                    <span style={{ fontSize: 'clamp(0.48rem, 1vw, 0.58rem)', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Câmera</span>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                      <label style={{ fontSize: '0.6rem', color: 'white', fontWeight: 600 }}>Vertical {cameraPhi}°</label>
-                      <input type="range" min="5" max="89" value={cameraPhi} onChange={e => setCameraPhi(e.target.value)} style={{ width: '100%', margin: 0, height: '14px' }} />
-                    </div>
+                    {[['Horizontal', cameraTheta, setCameraTheta, 0, 360], ['Vertical', cameraPhi, setCameraPhi, 0, 89], ['Zoom', cameraRadius, setCameraRadius, 50, 300]].map(([label, val, setter, min, max]) => (
+                      <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        <label style={{ fontSize: 'clamp(0.44rem, 0.9vw, 0.54rem)', color: 'white', fontWeight: 600 }}>{label} {val}{label === 'Zoom' ? '%' : '°'}</label>
+                        <input type="range" min={min} max={max} value={val} onChange={e => setter(e.target.value)} style={{ width: '100%', margin: 0, height: '10px', cursor: 'pointer' }} />
+                      </div>
+                    ))}
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                      <label style={{ fontSize: '0.6rem', color: 'white', fontWeight: 600 }}>Zoom {cameraRadius}%</label>
-                      <input type="range" min="50" max="300" value={cameraRadius} onChange={e => setCameraRadius(e.target.value)} style={{ width: '100%', margin: 0, height: '14px' }} />
-                    </div>
-
-                    <button type="button" onClick={() => { setCameraTheta(0); setCameraPhi(60); setCameraRadius(105) }}
-                      style={{ marginTop: '1px', fontSize: '0.58rem', padding: '0.15rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', cursor: 'pointer' }}
+                    <button type="button" onClick={() => { setCameraTheta(0); setCameraPhi(0); setCameraRadius(105) }}
+                      style={{ marginTop: '1px', fontSize: 'clamp(0.42rem, 0.85vw, 0.52rem)', padding: '0.1rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', cursor: 'pointer' }}
                     >
                       Resetar
                     </button>
                   </div>
 
-                  {/* Hiro Marker Reference Panel */}
+                  {/* Hiro Marker Reference Panel (Centralizado de forma plana) */}
                   <div style={{
                     position: 'absolute',
-                    bottom: '10px',
+                    top: '50%',
                     left: '50%',
-                    transform: 'translateX(-50%) rotateX(60deg)',
-                    width: '80px',
-                    height: '80px',
+                    transform: 'translate(-50%, -50%)',
+                    width: '120px',
+                    height: '120px',
                     backgroundImage: 'url("https://raw.githack.com/AR-js-org/AR.js/master/data/images/HIRO.jpg")',
                     backgroundSize: 'contain',
                     pointerEvents: 'none',
-                    opacity: 0.5,
-                    border: '2px solid white'
+                    opacity: 0.35,
+                    border: '1px dashed white',
+                    zIndex: 1
                   }}></div>
                 </div>
                 
-                {/* Position Controls */}
-                <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-color)', borderRadius: '7px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.75rem' }}>📐 Posição no Marcador</h4>
-                    <button
-                      type="button"
-                      onClick={() => setIsPinMode(!isPinMode)}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.3rem', 
-                        padding: '0.2rem 0.5rem',
-                        fontSize: '0.7rem',
-                        backgroundColor: isPinMode ? 'var(--primary)' : 'transparent',
-                        color: isPinMode ? 'white' : 'var(--text-color)',
-                        border: `1px solid ${isPinMode ? 'var(--primary)' : 'var(--border-color)'}`,
-                        borderRadius: '5px'
-                      }}
-                    >
-                      <MapPin size={11} />
-                      {isPinMode ? 'Clique...' : 'Pin'}
-                    </button>
-                  </div>
-                  
-                  {['x', 'y', 'z'].map(axis => (
-                    <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                      <label style={{ width: '80px', fontWeight: 600, fontSize: '0.68rem', flexShrink: 0 }}>
-                        {axis === 'x' ? 'X Esq/Dir' : axis === 'y' ? 'Y Cima/Baixo' : 'Z Frente/Trás'}
-                      </label>
-                      <input
-                        type="range"
-                        min={axis === 'y' ? "0" : "-2"}
-                        max={axis === 'y' ? "3" : "2"}
-                        step="0.01"
-                        value={modelPosition[axis]}
-                        onChange={e => setModelPosition({ ...modelPosition, [axis]: parseFloat(e.target.value) })}
-                        style={{ flex: 1, margin: 0 }}
-                      />
-                      <span style={{ width: '36px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.68rem', flexShrink: 0 }}>
-                        {modelPosition[axis].toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                  
-                  <button 
-                    type="button" 
-                    onClick={() => setModelPosition({ x: 0, y: 0.1, z: 0 })}
-                    style={{ marginTop: '0.3rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.25rem', fontSize: '0.7rem' }}
-                  >
-                    Resetar Posição
-                  </button>
-                </div>
+                {/* Position + Rotation Controls (2-col grid) */}
+                <div style={{ marginTop: '0.4rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
 
-                {/* Rotation Controls */}
-                <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-color)', borderRadius: '7px', border: '1px solid var(--border-color)' }}>
-                  <h4 style={{ margin: 0, marginBottom: '0.6rem', fontSize: '0.75rem' }}>🔄 Rotação</h4>
-                  
-                  {['x', 'y', 'z'].map(axis => (
-                    <div key={`rot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                      <label style={{ width: '80px', fontWeight: 600, fontSize: '0.68rem', flexShrink: 0 }}>
-                        {axis === 'x' ? 'X Tombar' : axis === 'y' ? 'Y Girar' : 'Z Inclinar'}
-                      </label>
-                      <input
-                        type="range"
-                        min="-180"
-                        max="180"
-                        step="1"
-                        value={modelRotation[axis]}
-                        onChange={e => setModelRotation({ ...modelRotation, [axis]: parseFloat(e.target.value) })}
-                        style={{ flex: 1, margin: 0 }}
-                      />
-                      <span style={{ width: '36px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.68rem', flexShrink: 0 }}>
-                        {modelRotation[axis]}°
-                      </span>
-                    </div>
-                  ))}
-                  
-                  <button 
-                    type="button" 
-                    onClick={() => setModelRotation({ x: 0, y: 0, z: 0 })}
-                    style={{ marginTop: '0.3rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.25rem', fontSize: '0.7rem' }}
-                  >
-                    Resetar Rotação
-                  </button>
+                  {/* Position */}
+                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>📐 Posição</h4>
+                    {['x', 'y', 'z'].map(axis => (
+                      <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                        <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
+                        <input
+                          type="range"
+                          min={axis === 'y' ? '0' : '-2'}
+                          max={axis === 'y' ? '3' : '2'}
+                          step="0.01"
+                          value={modelPosition[axis]}
+                          onChange={e => setModelPosition({ ...modelPosition, [axis]: parseFloat(e.target.value) })}
+                          style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
+                        />
+                        <span style={{ width: '2.4rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0 }}>{modelPosition[axis].toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setModelPosition({ x: 0, y: 0.1, z: 0 })}
+                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
+                    >Resetar</button>
+                  </div>
+
+                  {/* Rotation */}
+                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>🔄 Rotação</h4>
+                    {['x', 'y', 'z'].map(axis => (
+                      <div key={`rot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                        <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
+                        <input
+                          type="range"
+                          min="-180"
+                          max="180"
+                          step="1"
+                          value={modelRotation[axis]}
+                          onChange={e => setModelRotation({ ...modelRotation, [axis]: parseFloat(e.target.value) })}
+                          style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
+                        />
+                        <span style={{ width: '2.4rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0 }}>{modelRotation[axis]}°</span>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setModelRotation({ x: 0, y: 0, z: 0 })}
+                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
+                    >Resetar</button>
+                  </div>
+
                 </div>
 
                 {/* Save Button */}
