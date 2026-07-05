@@ -45,6 +45,7 @@ export default function EditExhibit({ isAdmin }) {
   const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
   const [modelPivot, setModelPivot] = useState({ x: 0, y: 0, z: 0 })
+  const [modelScale, setModelScale] = useState(1.0)
   const [cameraRadius, setCameraRadius] = useState(245) // zoom invertido: slider alto = câmera perto (245 → distância 105%)
   const cameraTheta = 0
   const cameraPhi = 0.1 // Próximo de 0 para visão de cima sem travar a rotação/câmera
@@ -82,6 +83,9 @@ export default function EditExhibit({ isAdmin }) {
       }
       if (data.model_pivot) {
         setModelPivot(data.model_pivot)
+      }
+      if (data.model_scale !== undefined && data.model_scale !== null) {
+        setModelScale(data.model_scale)
       }
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
@@ -130,6 +134,7 @@ export default function EditExhibit({ isAdmin }) {
         model_position: modelPosition,
         model_rotation: modelRotation,
         model_pivot: modelPivot,
+        model_scale: modelScale,
       }
 
       let data, error
@@ -394,10 +399,21 @@ export default function EditExhibit({ isAdmin }) {
                     camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
                     camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${350 - cameraRadius}%`}
                     orientation={`${modelRotation.z}deg ${modelRotation.x}deg ${modelRotation.y}deg`}
+                    scale={`${modelScale} ${modelScale} ${modelScale}`}
                     interaction-prompt="none"
                     style={{ width: '100%', height: '100%', outline: 'none', pointerEvents: 'none' }}
                     alt="Prévia do modelo 3D"
-                  ></model-viewer>
+                  >
+                    <div slot="hotspot-pivot" data-position={`${modelPivot.x}m ${modelPivot.y}m ${modelPivot.z}m`} style={{
+                      background: '#ef4444',
+                      border: '1.5px solid white',
+                      borderRadius: '50%',
+                      width: '12px',
+                      height: '12px',
+                      boxShadow: '0 0 6px rgba(0,0,0,0.6)',
+                      pointerEvents: 'none'
+                    }} />
+                  </model-viewer>
 
                   {/* Camera Control Panel (Apenas Zoom) */}
                   <div style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(15,23,42,0.92)', padding: '0.3rem 0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.2rem', zIndex: 10, width: 'clamp(90px, 28%, 130px)' }}>
@@ -445,14 +461,22 @@ export default function EditExhibit({ isAdmin }) {
                         <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
                         <input
                           type="range"
-                          min={axis === 'y' ? '-2' : '-5'}
-                          max={axis === 'y' ? '5' : '5'}
+                          min={axis === 'y' ? '-1' : '-5'}
+                          max={axis === 'y' ? '2.5' : '5'}
                           step="0.01"
                           value={modelPosition[axis]}
                           onChange={e => setModelPosition({ ...modelPosition, [axis]: parseFloat(e.target.value) })}
                           style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
                         />
-                        <span style={{ width: '2.4rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0 }}>{modelPosition[axis].toFixed(2)}</span>
+                        <input 
+                          type="number" 
+                          min={axis === 'y' ? '-1' : '-5'} 
+                          max={axis === 'y' ? '2.5' : '5'} 
+                          step="0.01"
+                          value={modelPosition[axis]} 
+                          onChange={e => setModelPosition({ ...modelPosition, [axis]: e.target.value === '' ? 0 : parseFloat(e.target.value) })} 
+                          style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
+                        />
                       </div>
                     ))}
                     <button type="button" onClick={() => setModelPosition({ x: 0, y: 0.1, z: 0 })}
@@ -475,7 +499,15 @@ export default function EditExhibit({ isAdmin }) {
                           onChange={e => setModelRotation({ ...modelRotation, [axis]: parseFloat(e.target.value) })}
                           style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
                         />
-                        <span style={{ width: '2.4rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0 }}>{modelRotation[axis]}°</span>
+                        <input 
+                          type="number" 
+                          min="-180" 
+                          max="180" 
+                          step="1"
+                          value={modelRotation[axis]} 
+                          onChange={e => setModelRotation({ ...modelRotation, [axis]: e.target.value === '' ? 0 : parseFloat(e.target.value) })} 
+                          style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
+                        />
                       </div>
                     ))}
                     <button type="button" onClick={() => setModelRotation({ x: 0, y: 0, z: 0 })}
@@ -498,10 +530,47 @@ export default function EditExhibit({ isAdmin }) {
                           onChange={e => setModelPivot({ ...modelPivot, [axis]: parseFloat(e.target.value) })}
                           style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
                         />
-                        <span style={{ width: '2.4rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0 }}>{modelPivot[axis].toFixed(2)}</span>
+                        <input 
+                          type="number" 
+                          min="-5" 
+                          max="5" 
+                          step="0.01"
+                          value={modelPivot[axis]} 
+                          onChange={e => setModelPivot({ ...modelPivot, [axis]: e.target.value === '' ? 0 : parseFloat(e.target.value) })} 
+                          style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
+                        />
                       </div>
                     ))}
                     <button type="button" onClick={() => setModelPivot({ x: 0, y: 0, z: 0 })}
+                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
+                    >Resetar</button>
+                  </div>
+
+                  {/* Scale Control */}
+                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>🔍 Escala Inicial</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                      <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: 'white' }}>XYZ</label>
+                      <input
+                        type="range"
+                        min="0.1"
+                        max="3"
+                        step="0.05"
+                        value={modelScale}
+                        onChange={e => setModelScale(parseFloat(e.target.value))}
+                        style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
+                      />
+                      <input 
+                        type="number" 
+                        min="0.1" 
+                        max="3" 
+                        step="0.05"
+                        value={modelScale} 
+                        onChange={e => setModelScale(e.target.value === '' ? 1 : parseFloat(e.target.value))} 
+                        style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
+                      />
+                    </div>
+                    <button type="button" onClick={() => setModelScale(1.0)}
                       style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
                     >Resetar</button>
                   </div>

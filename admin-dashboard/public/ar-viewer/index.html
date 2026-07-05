@@ -466,6 +466,9 @@
               rotationWrapper.setAttribute('rotation', `${rot.x} ${rot.y} ${rot.z}`)
             }
             modelEntity.setAttribute('position', `${-pivot.x} ${-pivot.y} ${-pivot.z}`)
+            
+            const scale = data.model_scale !== undefined && data.model_scale !== null ? data.model_scale : 1.0;
+            modelEntity.setAttribute('scale', `${scale} ${scale} ${scale}`)
 
             // After model loads, check for animations
             modelEntity.addEventListener('model-loaded', () => {
