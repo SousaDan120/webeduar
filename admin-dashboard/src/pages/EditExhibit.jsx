@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
+import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye, MapPin } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 // Dynamically load Google Model Viewer component for 3D previewing
@@ -23,6 +23,8 @@ export default function EditExhibit({ isAdmin }) {
   const isEditing = Boolean(id)
   const qrRef = useRef(null);
   const markerImgRef = useRef(null);
+  const viewerRef = useRef(null);
+  const [isPinMode, setIsPinMode] = useState(false);
 
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(isEditing)
@@ -187,6 +189,19 @@ export default function EditExhibit({ isAdmin }) {
 
   // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
   const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
+
+  const handleViewerClick = (event) => {
+    if (!isPinMode || !viewerRef.current) return;
+    const hit = viewerRef.current.positionAndNormalFromPoint(event.clientX, event.clientY);
+    if (hit) {
+      setModelPosition({
+        x: -hit.position.x,
+        y: -hit.position.y,
+        z: -hit.position.z
+      });
+      setIsPinMode(false);
+    }
+  };
 
   if (fetching) return <p>Carregando...</p>
 
@@ -357,19 +372,54 @@ export default function EditExhibit({ isAdmin }) {
               <>
                 <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                   <model-viewer
+                    ref={viewerRef}
+                    onClick={handleViewerClick}
                     src={previewModelUrl}
                     camera-controls
-                    auto-rotate
                     shadow-intensity="1"
                     camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
-                    style={{ width: '100%', height: '100%', outline: 'none' }}
+                    style={{ width: '100%', height: '100%', outline: 'none', cursor: isPinMode ? 'crosshair' : 'default' }}
                     alt="Prévia do modelo 3D"
                   ></model-viewer>
+                  {/* Hiro Marker Reference Panel */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '50%',
+                    transform: 'translateX(-50%) rotateX(60deg)',
+                    width: '80px',
+                    height: '80px',
+                    backgroundImage: 'url("https://raw.githack.com/AR-js-org/AR.js/master/data/images/HIRO.jpg")',
+                    backgroundSize: 'contain',
+                    pointerEvents: 'none',
+                    opacity: 0.5,
+                    border: '2px solid white'
+                  }}></div>
                 </div>
                 
                 {/* Position Controls */}
                 <div style={{ marginTop: '1.5rem', padding: '1.25rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <h4 style={{ marginBottom: '1.25rem', fontSize: '0.95rem' }}>📐 Ajuste de Posição no Marcador</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem' }}>📐 Ajuste de Posição no Marcador</h4>
+                    <button
+                      type="button"
+                      onClick={() => setIsPinMode(!isPinMode)}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.85rem',
+                        backgroundColor: isPinMode ? 'var(--primary)' : 'transparent',
+                        color: isPinMode ? 'white' : 'var(--text-color)',
+                        border: `1px solid ${isPinMode ? 'var(--primary)' : 'var(--border-color)'}`,
+                        borderRadius: '6px'
+                      }}
+                    >
+                      <MapPin size={16} />
+                      {isPinMode ? 'Clique no modelo...' : 'Marcar Centro'}
+                    </button>
+                  </div>
                   
                   {['x', 'y', 'z'].map(axis => (
                     <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
