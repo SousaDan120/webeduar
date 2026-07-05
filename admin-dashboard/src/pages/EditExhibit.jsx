@@ -23,6 +23,8 @@ export default function EditExhibit({ isAdmin }) {
   const isEditing = Boolean(id)
   const qrRef = useRef(null);
   const markerImgRef = useRef(null);
+  const viewerRef = useRef(null);
+
 
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(isEditing)
@@ -42,9 +44,11 @@ export default function EditExhibit({ isAdmin }) {
   const [exhibitId, setExhibitId] = useState(id || null)
   const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
+  const [modelPivot, setModelPivot] = useState({ x: 0, y: 0, z: 0 })
   const [cameraRadius, setCameraRadius] = useState(245) // zoom invertido: slider alto = câmera perto (245 → distância 105%)
   const cameraTheta = 0
   const cameraPhi = 0.1 // Próximo de 0 para visão de cima sem travar a rotação/câmera
+
 
   useEffect(() => {
     if (!isAdmin) {
@@ -75,6 +79,9 @@ export default function EditExhibit({ isAdmin }) {
       }
       if (data.model_rotation) {
         setModelRotation(data.model_rotation)
+      }
+      if (data.model_pivot) {
+        setModelPivot(data.model_pivot)
       }
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
@@ -122,6 +129,7 @@ export default function EditExhibit({ isAdmin }) {
         audio_url: finalAudioUrl,
         model_position: modelPosition,
         model_rotation: modelRotation,
+        model_pivot: modelPivot,
       }
 
       let data, error
@@ -195,6 +203,21 @@ export default function EditExhibit({ isAdmin }) {
 
   // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
   const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
+
+  // Update model scene local position inside model-viewer to shift the pivot point
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (viewer) {
+      const updatePivot = () => {
+        if (viewer.model && viewer.model.scene) {
+          // Negative offset moves geometry relative to local origin
+          viewer.model.scene.position.set(-modelPivot.x, -modelPivot.y, -modelPivot.z);
+        }
+      };
+      viewer.addEventListener('load', updatePivot);
+      updatePivot();
+    }
+  }, [modelPivot, previewModelUrl]);
 
   if (fetching) return <p>Carregando...</p>
 
@@ -365,11 +388,12 @@ export default function EditExhibit({ isAdmin }) {
               <>
                 <div style={{ width: '100%', height: 'clamp(160px, 25vw, 260px)', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                   <model-viewer
+                    ref={viewerRef}
                     src={previewModelUrl}
                     shadow-intensity="1"
                     camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
                     camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${350 - cameraRadius}%`}
-                    orientation={`${modelRotation.x}deg ${modelRotation.y}deg ${modelRotation.z}deg`}
+                    orientation={`${modelRotation.z}deg ${modelRotation.x}deg ${modelRotation.y}deg`}
                     interaction-prompt="none"
                     style={{ width: '100%', height: '100%', outline: 'none', pointerEvents: 'none' }}
                     alt="Prévia do modelo 3D"
@@ -410,8 +434,8 @@ export default function EditExhibit({ isAdmin }) {
                   }}></div>
                 </div>
                 
-                {/* Position + Rotation Controls (2-col grid) */}
-                <div style={{ marginTop: '0.4rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                {/* Position + Rotation + Pivot Controls (Responsive grid) */}
+                <div style={{ marginTop: '0.4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.4rem' }}>
 
                   {/* Position */}
                   <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
@@ -455,6 +479,29 @@ export default function EditExhibit({ isAdmin }) {
                       </div>
                     ))}
                     <button type="button" onClick={() => setModelRotation({ x: 0, y: 0, z: 0 })}
+                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
+                    >Resetar</button>
+                  </div>
+
+                  {/* Pivot Offset */}
+                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>📍 Desvio de Pivô</h4>
+                    {['x', 'y', 'z'].map(axis => (
+                      <div key={`pivot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
+                        <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
+                        <input
+                          type="range"
+                          min="-5"
+                          max="5"
+                          step="0.01"
+                          value={modelPivot[axis]}
+                          onChange={e => setModelPivot({ ...modelPivot, [axis]: parseFloat(e.target.value) })}
+                          style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
+                        />
+                        <span style={{ width: '2.4rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0 }}>{modelPivot[axis].toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setModelPivot({ x: 0, y: 0, z: 0 })}
                       style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
                     >Resetar</button>
                   </div>

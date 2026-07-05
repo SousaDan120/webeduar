@@ -322,14 +322,15 @@
 
       <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10"
                 raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
-        <a-entity id="exhibit-rotation-wrapper">
-          <a-entity
-            id="exhibit-model"
-            class="cantap"
-            position="0 0.1 0"
-            scale="1 1 1"
-            gesture-handler="minScale: 0.15; maxScale: 3"
-          ></a-entity>
+        <a-entity id="exhibit-position-wrapper">
+          <a-entity id="exhibit-rotation-wrapper">
+            <a-entity
+              id="exhibit-model"
+              class="cantap"
+              scale="1 1 1"
+              gesture-handler="minScale: 0.15; maxScale: 3"
+            ></a-entity>
+          </a-entity>
         </a-entity>
       </a-marker>
 
@@ -450,16 +451,21 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
             
-            // Set model position from database
+            // Set model position, rotation and pivot offset from database
             const pos = data.model_position || { x: 0, y: 0.1, z: 0 }
-            modelEntity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`)
-
-            // Set model rotation from database on the wrapper
             const rot = data.model_rotation || { x: 0, y: 0, z: 0 }
+            const pivot = data.model_pivot || { x: 0, y: 0, z: 0 }
+            
+            const positionWrapper = document.getElementById('exhibit-position-wrapper')
             const rotationWrapper = document.getElementById('exhibit-rotation-wrapper')
+            
+            if (positionWrapper) {
+              positionWrapper.setAttribute('position', `${pos.x + pivot.x} ${pos.y + pivot.y} ${pos.z + pivot.z}`)
+            }
             if (rotationWrapper) {
               rotationWrapper.setAttribute('rotation', `${rot.x} ${rot.y} ${rot.z}`)
             }
+            modelEntity.setAttribute('position', `${-pivot.x} ${-pivot.y} ${-pivot.z}`)
 
             // After model loads, check for animations
             modelEntity.addEventListener('model-loaded', () => {
