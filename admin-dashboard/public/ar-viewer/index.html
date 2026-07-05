@@ -413,6 +413,10 @@
             asset.setAttribute('src', modelUrl)
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
+            
+            // Set model position from database
+            const pos = data.model_position || { x: 0, y: 0.1, z: 0 }
+            modelEntity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`)
 
             // After model loads, auto-enable animation-mixer if animations exist
             modelEntity.addEventListener('model-loaded', () => {

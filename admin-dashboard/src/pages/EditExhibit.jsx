@@ -40,6 +40,7 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
+  const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
 
   useEffect(() => {
     if (!isAdmin) {
@@ -65,6 +66,9 @@ export default function EditExhibit({ isAdmin }) {
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
       setExhibitId(data.id)
+      if (data.model_position) {
+        setModelPosition(data.model_position)
+      }
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
     } finally {
@@ -109,6 +113,7 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
+        model_position: modelPosition,
       }
 
       let data, error
@@ -349,16 +354,52 @@ export default function EditExhibit({ isAdmin }) {
               <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
             </div>
             {previewModelUrl ? (
-              <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                <model-viewer
-                  src={previewModelUrl}
-                  camera-controls
-                  auto-rotate
-                  shadow-intensity="1"
-                  style={{ width: '100%', height: '100%', outline: 'none' }}
-                  alt="Prévia do modelo 3D"
-                ></model-viewer>
-              </div>
+              <>
+                <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                  <model-viewer
+                    src={previewModelUrl}
+                    camera-controls
+                    auto-rotate
+                    shadow-intensity="1"
+                    camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
+                    style={{ width: '100%', height: '100%', outline: 'none' }}
+                    alt="Prévia do modelo 3D"
+                  ></model-viewer>
+                </div>
+                
+                {/* Position Controls */}
+                <div style={{ marginTop: '1.5rem', padding: '1.25rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ marginBottom: '1.25rem', fontSize: '0.95rem' }}>📐 Ajuste de Posição no Marcador</h4>
+                  
+                  {['x', 'y', 'z'].map(axis => (
+                    <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                      <label style={{ width: '120px', fontWeight: 600, fontSize: '0.85rem' }}>
+                        {axis === 'x' ? 'X (Esquerda/Direita)' : axis === 'y' ? 'Y (Cima/Baixo)' : 'Z (Frente/Trás)'}
+                      </label>
+                      <input
+                        type="range"
+                        min={axis === 'y' ? "0" : "-2"}
+                        max={axis === 'y' ? "3" : "2"}
+                        step="0.01"
+                        value={modelPosition[axis]}
+                        onChange={e => setModelPosition({ ...modelPosition, [axis]: parseFloat(e.target.value) })}
+                        style={{ flex: 1, margin: 0 }}
+                      />
+                      <span style={{ width: '45px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                        {modelPosition[axis].toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                  
+                  <button 
+                    type="button" 
+                    onClick={() => setModelPosition({ x: 0, y: 0.1, z: 0 })}
+                    style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
+                  >
+                    Resetar Posição
+                  </button>
+                </div>
+              </>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
                 <Box size={36} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
