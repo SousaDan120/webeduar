@@ -42,9 +42,9 @@ export default function EditExhibit({ isAdmin }) {
   const [exhibitId, setExhibitId] = useState(id || null)
   const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
-  const [cameraTheta, setCameraTheta] = useState(0)   // horizontal (0-360)
-  const [cameraPhi, setCameraPhi] = useState(0)        // vertical elevation (0-89) (de frente/de cima sem inclinação)
   const [cameraRadius, setCameraRadius] = useState(245) // zoom invertido: slider alto = câmera perto (245 → distância 105%)
+  const cameraTheta = 0
+  const cameraPhi = 0.1 // Próximo de 0 para visão de cima sem travar a rotação/câmera
 
   useEffect(() => {
     if (!isAdmin) {
@@ -375,20 +375,18 @@ export default function EditExhibit({ isAdmin }) {
                     alt="Prévia do modelo 3D"
                   ></model-viewer>
 
-                  {/* Camera Control Panel */}
+                  {/* Camera Control Panel (Apenas Zoom) */}
                   <div style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(15,23,42,0.92)', padding: '0.3rem 0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.2rem', zIndex: 10, width: 'clamp(90px, 28%, 130px)' }}>
                     <span style={{ fontSize: 'clamp(0.48rem, 1vw, 0.58rem)', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Câmera</span>
 
-                    {[['Horizontal', cameraTheta, setCameraTheta, 0, 360], ['Vertical', cameraPhi, setCameraPhi, 0, 89], ['Zoom', cameraRadius, setCameraRadius, 50, 300]].map(([label, val, setter, min, max]) => (
-                      <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                        <label style={{ fontSize: 'clamp(0.44rem, 0.9vw, 0.54rem)', color: 'white', fontWeight: 600 }}>
-                          {label}{label === 'Zoom' ? ` ${Math.round((val / 300) * 100)}%` : ` ${val}°`}
-                        </label>
-                        <input type="range" min={min} max={max} value={val} onChange={e => setter(e.target.value)} style={{ width: '100%', margin: 0, height: '10px', cursor: 'pointer' }} />
-                      </div>
-                    ))}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                      <label style={{ fontSize: 'clamp(0.44rem, 0.9vw, 0.54rem)', color: 'white', fontWeight: 600 }}>
+                        Zoom {Math.round((cameraRadius / 300) * 100)}%
+                      </label>
+                      <input type="range" min="50" max="300" value={cameraRadius} onChange={e => setCameraRadius(parseFloat(e.target.value))} style={{ width: '100%', margin: 0, height: '10px', cursor: 'pointer' }} />
+                    </div>
 
-                    <button type="button" onClick={() => { setCameraTheta(0); setCameraPhi(0); setCameraRadius(245) }}
+                    <button type="button" onClick={() => setCameraRadius(245)}
                       style={{ marginTop: '1px', fontSize: 'clamp(0.42rem, 0.85vw, 0.52rem)', padding: '0.1rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', cursor: 'pointer' }}
                     >
                       Resetar
