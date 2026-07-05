@@ -211,16 +211,15 @@ export default function EditExhibit({ isAdmin }) {
 
   // Update model scene local position inside model-viewer to shift the pivot point
   useEffect(() => {
-    const viewer = viewerRef.current;
-    if (viewer) {
-      const updatePivot = () => {
-        if (viewer.model && viewer.model.scene) {
-          // Negative offset moves geometry relative to local origin
-          viewer.model.scene.position.set(-modelPivot.x, -modelPivot.y, -modelPivot.z);
-        }
-      };
-      viewer.addEventListener('load', updatePivot);
-      updatePivot();
+    if (viewerRef.current && viewerRef.current.model) {
+      viewerRef.current.model.scene.position.set(-modelPivot.x, -modelPivot.y, -modelPivot.z)
+      
+      try {
+        viewerRef.current.updateHotspot({
+          name: 'hotspot-pivot',
+          position: `${modelPivot.x}m ${modelPivot.y}m ${modelPivot.z}m`
+        })
+      } catch(e) {}
     }
   }, [modelPivot, previewModelUrl]);
 

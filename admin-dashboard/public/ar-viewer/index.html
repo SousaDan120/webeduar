@@ -320,15 +320,14 @@
       <a-light id="dir-light" type="directional" color="#ffffff" intensity="1.0"
                position="1 2 1"></a-light>
 
-      <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10"
+      <a-marker id="ar-marker" preset="hiro"
                 raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
         <a-entity id="exhibit-position-wrapper">
-          <a-entity id="exhibit-rotation-wrapper">
+          <a-entity id="exhibit-rotation-wrapper" gesture-handler="minScale: 0.15; maxScale: 3">
             <a-entity
               id="exhibit-model"
               class="cantap"
               scale="1 1 1"
-              gesture-handler="minScale: 0.15; maxScale: 3"
             ></a-entity>
           </a-entity>
         </a-entity>
