@@ -383,38 +383,38 @@ export default function EditExhibit({ isAdmin }) {
                     ref={viewerRef}
                     onClick={handleViewerClick}
                     src={previewModelUrl}
-                    camera-controls
                     shadow-intensity="1"
                     camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
                     camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${cameraRadius}%`}
                     orientation={`${modelRotation.x}deg ${modelRotation.y}deg ${modelRotation.z}deg`}
-                    style={{ width: '100%', height: '100%', outline: 'none', cursor: isPinMode ? 'crosshair' : 'default' }}
+                    interaction-prompt="none"
+                    style={{ width: '100%', height: '100%', outline: 'none', cursor: isPinMode ? 'crosshair' : 'default', pointerEvents: isPinMode ? 'auto' : 'none' }}
                     alt="Prévia do modelo 3D"
                   ></model-viewer>
                   
                   {/* Camera Control Panel */}
-                  <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(15,23,42,0.88)', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', flexDirection: 'column', gap: '0.6rem', zIndex: 10, minWidth: '160px' }}>
-                    <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Controle de Câmera</span>
+                  <div style={{ position: 'absolute', top: '6px', left: '6px', background: 'rgba(15,23,42,0.90)', padding: '0.4rem 0.5rem', borderRadius: '7px', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', flexDirection: 'column', gap: '0.3rem', zIndex: 10, minWidth: '120px', maxWidth: '38%' }}>
+                    <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Câmera</span>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <label style={{ fontSize: '0.72rem', color: 'white', fontWeight: 600 }}>Horizontal (Girar) {cameraTheta}°</label>
-                      <input type="range" min="0" max="360" value={cameraTheta} onChange={e => setCameraTheta(e.target.value)} style={{ width: '100%', margin: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                      <label style={{ fontSize: '0.6rem', color: 'white', fontWeight: 600 }}>Horizontal {cameraTheta}°</label>
+                      <input type="range" min="0" max="360" value={cameraTheta} onChange={e => setCameraTheta(e.target.value)} style={{ width: '100%', margin: 0, height: '14px' }} />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <label style={{ fontSize: '0.72rem', color: 'white', fontWeight: 600 }}>Vertical (Altura) {cameraPhi}°</label>
-                      <input type="range" min="5" max="89" value={cameraPhi} onChange={e => setCameraPhi(e.target.value)} style={{ width: '100%', margin: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                      <label style={{ fontSize: '0.6rem', color: 'white', fontWeight: 600 }}>Vertical {cameraPhi}°</label>
+                      <input type="range" min="5" max="89" value={cameraPhi} onChange={e => setCameraPhi(e.target.value)} style={{ width: '100%', margin: 0, height: '14px' }} />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <label style={{ fontSize: '0.72rem', color: 'white', fontWeight: 600 }}>Zoom {cameraRadius}%</label>
-                      <input type="range" min="50" max="300" value={cameraRadius} onChange={e => setCameraRadius(e.target.value)} style={{ width: '100%', margin: 0 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                      <label style={{ fontSize: '0.6rem', color: 'white', fontWeight: 600 }}>Zoom {cameraRadius}%</label>
+                      <input type="range" min="50" max="300" value={cameraRadius} onChange={e => setCameraRadius(e.target.value)} style={{ width: '100%', margin: 0, height: '14px' }} />
                     </div>
 
                     <button type="button" onClick={() => { setCameraTheta(0); setCameraPhi(60); setCameraRadius(105) }}
-                      style={{ marginTop: '2px', fontSize: '0.7rem', padding: '0.25rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '4px', cursor: 'pointer' }}
+                      style={{ marginTop: '1px', fontSize: '0.58rem', padding: '0.15rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', cursor: 'pointer' }}
                     >
-                      Resetar Câmera
+                      Resetar
                     </button>
                   </div>
 
@@ -435,33 +435,33 @@ export default function EditExhibit({ isAdmin }) {
                 </div>
                 
                 {/* Position Controls */}
-                <div style={{ marginTop: '1.5rem', padding: '1.25rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem' }}>📐 Ajuste de Posição no Marcador</h4>
+                <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-color)', borderRadius: '7px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.75rem' }}>📐 Posição no Marcador</h4>
                     <button
                       type="button"
                       onClick={() => setIsPinMode(!isPinMode)}
                       style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
-                        gap: '0.5rem', 
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.85rem',
+                        gap: '0.3rem', 
+                        padding: '0.2rem 0.5rem',
+                        fontSize: '0.7rem',
                         backgroundColor: isPinMode ? 'var(--primary)' : 'transparent',
                         color: isPinMode ? 'white' : 'var(--text-color)',
                         border: `1px solid ${isPinMode ? 'var(--primary)' : 'var(--border-color)'}`,
-                        borderRadius: '6px'
+                        borderRadius: '5px'
                       }}
                     >
-                      <MapPin size={16} />
-                      {isPinMode ? 'Clique no modelo...' : 'Marcar Centro'}
+                      <MapPin size={11} />
+                      {isPinMode ? 'Clique...' : 'Pin'}
                     </button>
                   </div>
                   
                   {['x', 'y', 'z'].map(axis => (
-                    <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                      <label style={{ width: '120px', fontWeight: 600, fontSize: '0.85rem' }}>
-                        {axis === 'x' ? 'X (Esquerda/Direita)' : axis === 'y' ? 'Y (Cima/Baixo)' : 'Z (Frente/Trás)'}
+                    <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                      <label style={{ width: '80px', fontWeight: 600, fontSize: '0.68rem', flexShrink: 0 }}>
+                        {axis === 'x' ? 'X Esq/Dir' : axis === 'y' ? 'Y Cima/Baixo' : 'Z Frente/Trás'}
                       </label>
                       <input
                         type="range"
@@ -472,7 +472,7 @@ export default function EditExhibit({ isAdmin }) {
                         onChange={e => setModelPosition({ ...modelPosition, [axis]: parseFloat(e.target.value) })}
                         style={{ flex: 1, margin: 0 }}
                       />
-                      <span style={{ width: '45px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                      <span style={{ width: '36px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.68rem', flexShrink: 0 }}>
                         {modelPosition[axis].toFixed(2)}
                       </span>
                     </div>
@@ -481,20 +481,20 @@ export default function EditExhibit({ isAdmin }) {
                   <button 
                     type="button" 
                     onClick={() => setModelPosition({ x: 0, y: 0.1, z: 0 })}
-                    style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
+                    style={{ marginTop: '0.3rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.25rem', fontSize: '0.7rem' }}
                   >
                     Resetar Posição
                   </button>
                 </div>
 
                 {/* Rotation Controls */}
-                <div style={{ marginTop: '1rem', padding: '1.25rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <h4 style={{ margin: 0, marginBottom: '1.25rem', fontSize: '0.95rem' }}>🔄 Ajuste de Rotação</h4>
+                <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--bg-color)', borderRadius: '7px', border: '1px solid var(--border-color)' }}>
+                  <h4 style={{ margin: 0, marginBottom: '0.6rem', fontSize: '0.75rem' }}>🔄 Rotação</h4>
                   
                   {['x', 'y', 'z'].map(axis => (
-                    <div key={`rot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                      <label style={{ width: '120px', fontWeight: 600, fontSize: '0.85rem' }}>
-                        {axis === 'x' ? 'Eixo X (Tombar)' : axis === 'y' ? 'Eixo Y (Girar)' : 'Eixo Z (Inclinar)'}
+                    <div key={`rot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
+                      <label style={{ width: '80px', fontWeight: 600, fontSize: '0.68rem', flexShrink: 0 }}>
+                        {axis === 'x' ? 'X Tombar' : axis === 'y' ? 'Y Girar' : 'Z Inclinar'}
                       </label>
                       <input
                         type="range"
@@ -505,7 +505,7 @@ export default function EditExhibit({ isAdmin }) {
                         onChange={e => setModelRotation({ ...modelRotation, [axis]: parseFloat(e.target.value) })}
                         style={{ flex: 1, margin: 0 }}
                       />
-                      <span style={{ width: '45px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                      <span style={{ width: '36px', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.68rem', flexShrink: 0 }}>
                         {modelRotation[axis]}°
                       </span>
                     </div>
@@ -514,7 +514,7 @@ export default function EditExhibit({ isAdmin }) {
                   <button 
                     type="button" 
                     onClick={() => setModelRotation({ x: 0, y: 0, z: 0 })}
-                    style={{ marginTop: '0.5rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
+                    style={{ marginTop: '0.3rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.25rem', fontSize: '0.7rem' }}
                   >
                     Resetar Rotação
                   </button>
