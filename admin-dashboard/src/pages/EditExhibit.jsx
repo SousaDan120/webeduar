@@ -46,7 +46,8 @@ export default function EditExhibit({ isAdmin }) {
   const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
   const [modelPivot, setModelPivot] = useState({ x: 0, y: 0, z: 0 })
   const [modelScale, setModelScale] = useState(1.0)
-  const [cameraRadius, setCameraRadius] = useState(245) // zoom invertido: slider alto = câmera perto (245 → distância 105%)
+  const [cameraZoom, setCameraZoom] = useState(100) // zoom em %
+  const cameraDistance = (2.5 / (cameraZoom / 100)).toFixed(2) // 100% = 2.5m de distância
   const cameraTheta = 0
   const cameraPhi = 0.1 // Próximo de 0 para visão de cima sem travar a rotação/câmera
 
@@ -438,7 +439,8 @@ export default function EditExhibit({ isAdmin }) {
                     src={previewModelUrl}
                     shadow-intensity="1"
                     camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
-                    camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${350 - cameraRadius}%`}
+                    camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${cameraDistance}m`}
+                    field-of-view="45deg"
                     orientation={`${modelRotation.z}deg ${modelRotation.x}deg ${modelRotation.y}deg`}
                     scale={`${modelScale} ${modelScale} ${modelScale}`}
                     interaction-prompt="none"
@@ -462,12 +464,12 @@ export default function EditExhibit({ isAdmin }) {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                       <label style={{ fontSize: 'clamp(0.44rem, 0.9vw, 0.54rem)', color: 'white', fontWeight: 600 }}>
-                        Zoom {Math.round((cameraRadius / 300) * 100)}%
+                        Zoom {Math.round(cameraZoom)}%
                       </label>
-                      <input type="range" min="50" max="300" value={cameraRadius} onChange={e => setCameraRadius(parseFloat(e.target.value))} style={{ width: '100%', margin: 0, height: '10px', cursor: 'pointer' }} />
+                      <input type="range" min="20" max="300" value={cameraZoom} onChange={e => setCameraZoom(parseFloat(e.target.value))} style={{ width: '100%', margin: 0, height: '10px', cursor: 'pointer' }} />
                     </div>
 
-                    <button type="button" onClick={() => setCameraRadius(245)}
+                    <button type="button" onClick={() => setCameraZoom(100)}
                       style={{ marginTop: '1px', fontSize: 'clamp(0.42rem, 0.85vw, 0.52rem)', padding: '0.1rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', cursor: 'pointer' }}
                     >
                       Resetar

@@ -13,12 +13,12 @@
     <!-- Gesture Detector & Handler Libraries -->
     <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
     <script>
-      // Sobrescreve o método de rotação nativo da biblioteca para usar os eixos X e Z ao invés de X e Y
+      // Sobrescreve o método de rotação nativo da biblioteca para usar apenas os eixos Y e X (como padrão) e desabilitar o Z
       document.addEventListener('DOMContentLoaded', () => {
         if (AFRAME && AFRAME.components['gesture-handler']) {
           AFRAME.components['gesture-handler'].Component.prototype.handleRotation = function (event) {
             if (this.isVisible) {
-              this.el.object3D.rotation.z += event.detail.positionChange.x * this.data.rotationFactor;
+              this.el.object3D.rotation.y += event.detail.positionChange.x * this.data.rotationFactor;
               this.el.object3D.rotation.x += event.detail.positionChange.y * this.data.rotationFactor;
             }
           };
@@ -336,7 +336,7 @@
       <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10"
                 raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
         <a-entity id="exhibit-position-wrapper">
-          <a-entity id="exhibit-rotation-wrapper" gesture-handler="minScale: 0.15; maxScale: 6">
+          <a-entity id="exhibit-rotation-wrapper" gesture-handler="minScale: 0.15; maxScale: 3">
             <a-entity
               id="exhibit-model"
               class="cantap"
