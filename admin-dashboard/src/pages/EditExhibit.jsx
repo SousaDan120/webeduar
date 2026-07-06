@@ -40,6 +40,7 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
+  const [modelRotationY, setModelRotationY] = useState(0)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -65,6 +66,8 @@ export default function EditExhibit({ isAdmin }) {
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
       setExhibitId(data.id)
+      const rot = data.model_rotation || { x: 0, y: 0, z: 0 }
+      setModelRotationY(rot.y || 0)
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
     } finally {
@@ -109,6 +112,7 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
+        model_rotation: { x: 0, y: modelRotationY, z: 0 },
       }
 
       let data, error
@@ -256,6 +260,29 @@ export default function EditExhibit({ isAdmin }) {
               </small>
             </div>
 
+             {/* Rotation slider */}
+             <div style={{ marginBottom: '1.5rem' }}>
+               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                 🔄 Rotação Inicial (Face do Objeto)
+               </label>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                 <input
+                   type="range"
+                   min="0"
+                   max="360"
+                   value={modelRotationY}
+                   onChange={e => setModelRotationY(parseInt(e.target.value))}
+                   style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
+                 />
+                 <span style={{ width: '4rem', textAlign: 'right', fontFamily: 'monospace', fontWeight: 'bold' }}>
+                   {modelRotationY}°
+                 </span>
+               </div>
+               <small style={{ color: 'var(--text-muted)' }}>
+                 Define qual lado do modelo 3D estará de frente para o usuário ao carregar.
+               </small>
+             </div>
+
             {/* 3D Model Upload */}
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
@@ -354,6 +381,7 @@ export default function EditExhibit({ isAdmin }) {
                   src={previewModelUrl}
                   camera-controls
                   auto-rotate
+                  orientation={`0deg ${modelRotationY}deg 0deg`}
                   shadow-intensity="1"
                   style={{ width: '100%', height: '100%', outline: 'none' }}
                   alt="Prévia do modelo 3D"

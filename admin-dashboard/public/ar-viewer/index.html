@@ -310,7 +310,7 @@
           class="cantap"
           position="0 0.1 0"
           scale="1 1 1"
-          gesture-handler="minScale: 0.15; maxScale: 3"
+          gesture-handler="minScale: 0.2; maxScale: 2"
         ></a-entity>
       </a-marker>
 
@@ -414,20 +414,30 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
-            // After model loads, auto-enable animation-mixer if animations exist and normalize scale
+            // After model loads, auto-enable animation-mixer if animations exist, normalize scale and center model on top of marker
             modelEntity.addEventListener('model-loaded', () => {
               const obj  = modelEntity.getObject3D('mesh')
               if (obj) {
-                // Auto-fit scale logic: calculate bounding box and scale to target size (1.2 units)
+                // Calculate bounding box, size and center
                 const box = new THREE.Box3().setFromObject(obj)
                 const size = new THREE.Vector3()
+                const center = new THREE.Vector3()
                 box.getSize(size)
+                box.getCenter(center)
+
+                // Auto-fit scale logic: scale to target size (1.2 units)
                 const maxDim = Math.max(size.x, size.y, size.z)
                 if (maxDim > 0) {
                   const targetSize = 1.2
                   const scaleFactor = targetSize / maxDim
                   modelEntity.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`)
+                  if (modelEntity.components['gesture-handler']) {
+                    modelEntity.components['gesture-handler'].initialScale = new THREE.Vector3(scaleFactor, scaleFactor, scaleFactor);
+                  }
                 }
+
+                // Align model center horizontally (X and Z) and place base (min Y) on the marker
+                obj.position.set(-center.x, -box.min.y, -center.z)
 
                 // Check animations on the raw THREE object
                 if (obj.animations && obj.animations.length > 0) {
