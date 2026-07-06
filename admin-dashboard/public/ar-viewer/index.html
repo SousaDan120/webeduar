@@ -414,14 +414,27 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
-            // After model loads, auto-enable animation-mixer if animations exist
+            // After model loads, auto-enable animation-mixer if animations exist and normalize scale
             modelEntity.addEventListener('model-loaded', () => {
               const obj  = modelEntity.getObject3D('mesh')
-              // Check animations on the raw THREE object
-              if (obj && obj.animations && obj.animations.length > 0) {
-                modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')
-                hasAnimations = true
-                animBtn.classList.add('visible')
+              if (obj) {
+                // Auto-fit scale logic: calculate bounding box and scale to target size (1.2 units)
+                const box = new THREE.Box3().setFromObject(obj)
+                const size = new THREE.Vector3()
+                box.getSize(size)
+                const maxDim = Math.max(size.x, size.y, size.z)
+                if (maxDim > 0) {
+                  const targetSize = 1.2
+                  const scaleFactor = targetSize / maxDim
+                  modelEntity.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`)
+                }
+
+                // Check animations on the raw THREE object
+                if (obj.animations && obj.animations.length > 0) {
+                  modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')
+                  hasAnimations = true
+                  animBtn.classList.add('visible')
+                }
               }
             })
           }
