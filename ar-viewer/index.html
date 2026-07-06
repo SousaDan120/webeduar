@@ -12,19 +12,6 @@
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <!-- Gesture Detector & Handler Libraries -->
     <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
-    <script>
-      // Sobrescreve o método de rotação nativo da biblioteca para usar apenas os eixos Y e X (como padrão) e desabilitar o Z
-      document.addEventListener('DOMContentLoaded', () => {
-        if (AFRAME && AFRAME.components['gesture-handler']) {
-          AFRAME.components['gesture-handler'].Component.prototype.handleRotation = function (event) {
-            if (this.isVisible) {
-              this.el.object3D.rotation.y += event.detail.positionChange.x * this.data.rotationFactor;
-              this.el.object3D.rotation.x += event.detail.positionChange.y * this.data.rotationFactor;
-            }
-          };
-        }
-      });
-    </script>
     <!-- A-Frame Extras for GLTF animation support -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <!-- Supabase JS -->
@@ -335,14 +322,13 @@
 
       <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10"
                 raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
-        <a-entity id="exhibit-position-wrapper">
-          <a-entity id="exhibit-rotation-wrapper" gesture-handler="minScale: 0.15; maxScale: 3">
-            <a-entity
-              id="exhibit-model"
-              class="cantap"
-            ></a-entity>
-          </a-entity>
-        </a-entity>
+        <a-entity
+          id="exhibit-model"
+          class="cantap"
+          position="0 0.1 0"
+          scale="1 1 1"
+          gesture-handler="minScale: 0.15; maxScale: 3"
+        ></a-entity>
       </a-marker>
 
       <a-entity camera></a-entity>
@@ -461,28 +447,6 @@
             asset.setAttribute('src', modelUrl)
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
-            
-            // Set model position, rotation and pivot offset from database
-            const pos = data.model_position || { x: 0, y: 0.1, z: 0 }
-            const rot = data.model_rotation || { x: 0, y: 0, z: 0 }
-            const pivot = data.model_pivot || { x: 0, y: 0, z: 0 }
-            
-            const positionWrapper = document.getElementById('exhibit-position-wrapper')
-            const rotationWrapper = document.getElementById('exhibit-rotation-wrapper')
-            
-            if (positionWrapper) {
-              // A posição controlada pelo usuário é a posição final do pivô do objeto no mundo AR.
-              positionWrapper.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`)
-            }
-            if (rotationWrapper) {
-              rotationWrapper.setAttribute('rotation', `${rot.x} ${rot.y} ${rot.z}`)
-            }
-            modelEntity.setAttribute('position', `${-pivot.x} ${-pivot.y} ${-pivot.z}`)
-            
-            const scale = data.model_scale !== undefined && data.model_scale !== null ? data.model_scale : 1.0;
-            if (rotationWrapper) {
-              rotationWrapper.setAttribute('scale', `${scale} ${scale} ${scale}`)
-            }
 
             // After model loads, check for animations
             modelEntity.addEventListener('model-loaded', () => {

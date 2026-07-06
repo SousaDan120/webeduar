@@ -23,8 +23,6 @@ export default function EditExhibit({ isAdmin }) {
   const isEditing = Boolean(id)
   const qrRef = useRef(null);
   const markerImgRef = useRef(null);
-  const viewerRef = useRef(null);
-
 
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(isEditing)
@@ -42,15 +40,6 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
-  const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
-  const [modelRotation, setModelRotation] = useState({ x: 0, y: 0, z: 0 })
-  const [modelPivot, setModelPivot] = useState({ x: 0, y: 0, z: 0 })
-  const [modelScale, setModelScale] = useState(1.0)
-  const [cameraZoom, setCameraZoom] = useState(100) // zoom em %
-  const cameraDistance = (2.5 / (cameraZoom / 100)).toFixed(2) // 100% = 2.5m de distância
-  const cameraTheta = 0
-  const cameraPhi = 0.1 // Próximo de 0 para visão de cima sem travar a rotação/câmera
-
 
   useEffect(() => {
     if (!isAdmin) {
@@ -76,18 +65,6 @@ export default function EditExhibit({ isAdmin }) {
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
       setExhibitId(data.id)
-      if (data.model_position) {
-        setModelPosition(data.model_position)
-      }
-      if (data.model_rotation) {
-        setModelRotation(data.model_rotation)
-      }
-      if (data.model_pivot) {
-        setModelPivot(data.model_pivot)
-      }
-      if (data.model_scale !== undefined && data.model_scale !== null) {
-        setModelScale(data.model_scale)
-      }
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
     } finally {
@@ -132,10 +109,6 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
-        model_position: modelPosition,
-        model_rotation: modelRotation,
-        model_pivot: modelPivot,
-        model_scale: modelScale,
       }
 
       let data, error
@@ -209,62 +182,6 @@ export default function EditExhibit({ isAdmin }) {
 
   // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
   const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
-
-  // Update model scene local position inside model-viewer to shift the pivot point
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (viewer) {
-      const updatePivot = () => {
-        if (viewer.model && viewer.model.scene) {
-          // Negative offset moves geometry relative to local origin
-          viewer.model.scene.position.set(-modelPivot.x, -modelPivot.y, -modelPivot.z);
-        }
-      };
-      viewer.addEventListener('load', updatePivot);
-      updatePivot();
-    }
-  }, [modelPivot, previewModelUrl]);
-
-  const handleAutoFit = () => {
-    const viewer = viewerRef.current;
-    if (viewer) {
-      let idealScale = 1.0;
-      let height = 1.0;
-      const S = modelScale || 1.0;
-
-      // Ajusta a escala e obtém dimensões base
-      if (viewer.getDimensions) {
-        const dim = viewer.getDimensions();
-        const baseDimY = dim.y / S;
-        const maxDim = Math.max(dim.x, dim.y, dim.z) / S;
-        if (maxDim > 0) {
-          idealScale = 1.0 / maxDim;
-          height = baseDimY;
-          setModelScale(parseFloat(idealScale.toFixed(2)));
-        }
-      }
-
-      // Ajusta o pivô para o centro geométrico exato (desfazendo escalas e offsets atuais)
-      if (viewer.getBoundingBoxCenter) {
-        const center = viewer.getBoundingBoxCenter();
-        setModelPivot({
-          x: parseFloat(((center.x / S) + modelPivot.x).toFixed(3)),
-          y: parseFloat(((center.y / S) + modelPivot.y).toFixed(3)),
-          z: parseFloat(((center.z / S) + modelPivot.z).toFixed(3))
-        });
-      }
-
-      // Centraliza perfeitamente no marcador Hiro (x=0, z=0) e cola no chão (y = metade da altura escalada)
-      setModelPosition({
-        x: 0,
-        y: parseFloat(((height / 2) * idealScale).toFixed(2)),
-        z: 0
-      });
-
-      // Reseta a rotação
-      setModelRotation({ x: 0, y: 0, z: 0 });
-    }
-  };
 
   if (fetching) return <p>Carregando...</p>
 
@@ -432,212 +349,16 @@ export default function EditExhibit({ isAdmin }) {
               <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
             </div>
             {previewModelUrl ? (
-              <>
-                <div style={{ width: '100%', height: 'clamp(160px, 25vw, 260px)', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                  <model-viewer
-                    ref={viewerRef}
-                    src={previewModelUrl}
-                    shadow-intensity="1"
-                    camera-target={`${-modelPosition.x}m ${-modelPosition.y}m ${-modelPosition.z}m`}
-                    camera-orbit={`${cameraTheta}deg ${cameraPhi}deg ${cameraDistance}m`}
-                    field-of-view="45deg"
-                    orientation={`${modelRotation.z}deg ${modelRotation.x}deg ${modelRotation.y}deg`}
-                    scale={`${modelScale} ${modelScale} ${modelScale}`}
-                    interaction-prompt="none"
-                    style={{ width: '100%', height: '100%', outline: 'none', pointerEvents: 'none' }}
-                    alt="Prévia do modelo 3D"
-                  >
-                    <div slot="hotspot-pivot" data-position={`${modelPivot.x}m ${modelPivot.y}m ${modelPivot.z}m`} style={{
-                      background: '#ef4444',
-                      border: '1.5px solid white',
-                      borderRadius: '50%',
-                      width: '12px',
-                      height: '12px',
-                      boxShadow: '0 0 6px rgba(0,0,0,0.6)',
-                      pointerEvents: 'none'
-                    }} />
-                  </model-viewer>
-
-                  {/* Camera Control Panel (Apenas Zoom) */}
-                  <div style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(15,23,42,0.92)', padding: '0.3rem 0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.2rem', zIndex: 10, width: 'clamp(90px, 28%, 130px)' }}>
-                    <span style={{ fontSize: 'clamp(0.48rem, 1vw, 0.58rem)', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Câmera</span>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                      <label style={{ fontSize: 'clamp(0.44rem, 0.9vw, 0.54rem)', color: 'white', fontWeight: 600 }}>
-                        Zoom {Math.round(cameraZoom)}%
-                      </label>
-                      <input type="range" min="20" max="300" value={cameraZoom} onChange={e => setCameraZoom(parseFloat(e.target.value))} style={{ width: '100%', margin: 0, height: '10px', cursor: 'pointer' }} />
-                    </div>
-
-                    <button type="button" onClick={() => setCameraZoom(100)}
-                      style={{ marginTop: '1px', fontSize: 'clamp(0.42rem, 0.85vw, 0.52rem)', padding: '0.1rem 0', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '3px', cursor: 'pointer' }}
-                    >
-                      Resetar
-                    </button>
-                  </div>
-
-                  {/* Hiro Marker Reference Panel (Centralizado de forma plana) */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: '120px',
-                    height: '120px',
-                    backgroundImage: 'url("https://raw.githack.com/AR-js-org/AR.js/master/data/images/HIRO.jpg")',
-                    backgroundSize: 'contain',
-                    pointerEvents: 'none',
-                    opacity: 0.35,
-                    border: '1px dashed white',
-                    zIndex: 1
-                  }}></div>
-                </div>
-                
-                {/* Position + Rotation + Pivot Controls (Responsive grid) */}
-                <div style={{ marginTop: '0.4rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.4rem' }}>
-
-                  {/* Position */}
-                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>📐 Posição</h4>
-                    {['x', 'y', 'z'].map(axis => (
-                      <div key={axis} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                        <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
-                        <input
-                          type="range"
-                          min={axis === 'y' ? '-1' : '-5'}
-                          max={axis === 'y' ? '2.5' : '5'}
-                          step="0.01"
-                          value={modelPosition[axis]}
-                          onChange={e => setModelPosition({ ...modelPosition, [axis]: parseFloat(e.target.value) })}
-                          style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
-                        />
-                        <input 
-                          type="number" 
-                          min={axis === 'y' ? '-1' : '-5'} 
-                          max={axis === 'y' ? '2.5' : '5'} 
-                          step="0.01"
-                          value={modelPosition[axis]} 
-                          onChange={e => setModelPosition({ ...modelPosition, [axis]: e.target.value === '' ? 0 : parseFloat(e.target.value) })} 
-                          style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
-                        />
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => setModelPosition({ x: 0, y: 0.1, z: 0 })}
-                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
-                    >Resetar</button>
-                  </div>
-
-                  {/* Rotation */}
-                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>🔄 Rotação</h4>
-                    {['x', 'y', 'z'].map(axis => (
-                      <div key={`rot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                        <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
-                        <input
-                          type="range"
-                          min="-180"
-                          max="180"
-                          step="1"
-                          value={modelRotation[axis]}
-                          onChange={e => setModelRotation({ ...modelRotation, [axis]: parseFloat(e.target.value) })}
-                          style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
-                        />
-                        <input 
-                          type="number" 
-                          min="-180" 
-                          max="180" 
-                          step="1"
-                          value={modelRotation[axis]} 
-                          onChange={e => setModelRotation({ ...modelRotation, [axis]: e.target.value === '' ? 0 : parseFloat(e.target.value) })} 
-                          style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
-                        />
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => setModelRotation({ x: 0, y: 0, z: 0 })}
-                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
-                    >Resetar</button>
-                  </div>
-
-                  {/* Pivot Offset */}
-                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>📍 Desvio de Pivô</h4>
-                    {['x', 'y', 'z'].map(axis => (
-                      <div key={`pivot-${axis}`} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                        <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: axis === 'x' ? '#f87171' : axis === 'y' ? '#4ade80' : '#60a5fa' }}>{axis.toUpperCase()}</label>
-                        <input
-                          type="range"
-                          min="-5"
-                          max="5"
-                          step="0.01"
-                          value={modelPivot[axis]}
-                          onChange={e => setModelPivot({ ...modelPivot, [axis]: parseFloat(e.target.value) })}
-                          style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
-                        />
-                        <input 
-                          type="number" 
-                          min="-5" 
-                          max="5" 
-                          step="0.01"
-                          value={modelPivot[axis]} 
-                          onChange={e => setModelPivot({ ...modelPivot, [axis]: e.target.value === '' ? 0 : parseFloat(e.target.value) })} 
-                          style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
-                        />
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => setModelPivot({ x: 0, y: 0, z: 0 })}
-                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
-                    >Resetar</button>
-                  </div>
-
-                  {/* Scale Control */}
-                  <div style={{ padding: '0.4rem 0.5rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                    <h4 style={{ margin: '0 0 0.3rem', fontSize: 'clamp(0.6rem, 1.2vw, 0.72rem)' }}>🔍 Escala Inicial</h4>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
-                      <label style={{ width: '1.6rem', fontWeight: 700, fontSize: 'clamp(0.52rem, 1vw, 0.62rem)', flexShrink: 0, color: 'white' }}>XYZ</label>
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="3"
-                        step="0.05"
-                        value={modelScale}
-                        onChange={e => setModelScale(parseFloat(e.target.value))}
-                        style={{ flex: 1, margin: 0, height: '10px', cursor: 'pointer' }}
-                      />
-                      <input 
-                        type="number" 
-                        min="0.01" 
-                        max="100" 
-                        step="0.05"
-                        value={modelScale} 
-                        onChange={e => setModelScale(e.target.value === '' ? 1 : parseFloat(e.target.value))} 
-                        style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.2rem', marginTop: '0.2rem' }}>
-                      <button type="button" onClick={() => setModelScale(1.0)}
-                        style={{ flex: 1, justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
-                      >Resetar Escala</button>
-                      <button type="button" onClick={handleAutoFit}
-                        title="Ajusta o tamanho (1 unid) e centraliza o pivô no centro geométrico do objeto"
-                        style={{ flex: 1.5, justifyContent: 'center', backgroundColor: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid #60a5fa', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px', fontWeight: 600 }}
-                      >✨ Auto-Ajuste Mágico</button>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Save Button */}
-                <button 
-                  type="button" 
-                  onClick={handleSubmit} 
-                  disabled={loading} 
-                  className="primary" 
-                  style={{ marginTop: '1.5rem', width: '100%', justifyContent: 'center', padding: '0.9rem' }}
-                >
-                  <Save size={18} />
-                  {loading ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-              </>
+              <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                <model-viewer
+                  src={previewModelUrl}
+                  camera-controls
+                  auto-rotate
+                  shadow-intensity="1"
+                  style={{ width: '100%', height: '100%', outline: 'none' }}
+                  alt="Prévia do modelo 3D"
+                ></model-viewer>
+              </div>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
                 <Box size={36} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
