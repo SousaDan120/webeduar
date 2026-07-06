@@ -458,7 +458,8 @@
             const rotationWrapper = document.getElementById('exhibit-rotation-wrapper')
             
             if (positionWrapper) {
-              positionWrapper.setAttribute('position', `${pos.x + pivot.x} ${pos.y + pivot.y} ${pos.z + pivot.z}`)
+              // A posição controlada pelo usuário é a posição final do pivô do objeto no mundo AR.
+              positionWrapper.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`)
             }
             if (rotationWrapper) {
               rotationWrapper.setAttribute('rotation', `${rot.x} ${rot.y} ${rot.z}`)

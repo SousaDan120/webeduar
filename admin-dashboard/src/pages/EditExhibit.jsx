@@ -224,6 +224,47 @@ export default function EditExhibit({ isAdmin }) {
     }
   }, [modelPivot, previewModelUrl]);
 
+  const handleAutoFit = () => {
+    const viewer = viewerRef.current;
+    if (viewer) {
+      let idealScale = 1.0;
+      let height = 1.0;
+      const S = modelScale || 1.0;
+
+      // Ajusta a escala e obtém dimensões base
+      if (viewer.getDimensions) {
+        const dim = viewer.getDimensions();
+        const baseDimY = dim.y / S;
+        const maxDim = Math.max(dim.x, dim.y, dim.z) / S;
+        if (maxDim > 0) {
+          idealScale = 1.0 / maxDim;
+          height = baseDimY;
+          setModelScale(parseFloat(idealScale.toFixed(2)));
+        }
+      }
+
+      // Ajusta o pivô para o centro geométrico exato (desfazendo escalas e offsets atuais)
+      if (viewer.getBoundingBoxCenter) {
+        const center = viewer.getBoundingBoxCenter();
+        setModelPivot({
+          x: parseFloat(((center.x / S) + modelPivot.x).toFixed(3)),
+          y: parseFloat(((center.y / S) + modelPivot.y).toFixed(3)),
+          z: parseFloat(((center.z / S) + modelPivot.z).toFixed(3))
+        });
+      }
+
+      // Centraliza perfeitamente no marcador Hiro (x=0, z=0) e cola no chão (y = metade da altura escalada)
+      setModelPosition({
+        x: 0,
+        y: parseFloat(((height / 2) * idealScale).toFixed(2)),
+        z: 0
+      });
+
+      // Reseta a rotação
+      setModelRotation({ x: 0, y: 0, z: 0 });
+    }
+  };
+
   if (fetching) return <p>Carregando...</p>
 
   return (
@@ -562,17 +603,23 @@ export default function EditExhibit({ isAdmin }) {
                       />
                       <input 
                         type="number" 
-                        min="0.1" 
-                        max="3" 
+                        min="0.01" 
+                        max="100" 
                         step="0.05"
                         value={modelScale} 
                         onChange={e => setModelScale(e.target.value === '' ? 1 : parseFloat(e.target.value))} 
                         style={{ width: '3.2rem', textAlign: 'right', fontFamily: 'monospace', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', flexShrink: 0, background: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.1rem' }}
                       />
                     </div>
-                    <button type="button" onClick={() => setModelScale(1.0)}
-                      style={{ marginTop: '0.2rem', width: '100%', justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
-                    >Resetar</button>
+                    <div style={{ display: 'flex', gap: '0.2rem', marginTop: '0.2rem' }}>
+                      <button type="button" onClick={() => setModelScale(1.0)}
+                        style={{ flex: 1, justifyContent: 'center', backgroundColor: 'transparent', color: 'var(--text-color)', border: '1px solid var(--border-color)', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px' }}
+                      >Resetar Escala</button>
+                      <button type="button" onClick={handleAutoFit}
+                        title="Ajusta o tamanho (1 unid) e centraliza o pivô no centro geométrico do objeto"
+                        style={{ flex: 1.5, justifyContent: 'center', backgroundColor: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid #60a5fa', padding: '0.15rem', fontSize: 'clamp(0.5rem, 0.9vw, 0.6rem)', cursor: 'pointer', borderRadius: '4px', fontWeight: 600 }}
+                      >✨ Auto-Ajuste Mágico</button>
+                    </div>
                   </div>
 
                 </div>
