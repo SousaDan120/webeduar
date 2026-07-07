@@ -351,13 +351,98 @@ export default function EditExhibit({ isAdmin }) {
             {previewModelUrl ? (
               <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                 <model-viewer
+                  ref={(el) => {
+                    if (el) {
+                      // Adicionar marcador Hiro como referência visual
+                      const scene = el.querySelector('::part(model-viewer-scene)');
+                      const markerPlane = document.createElement('div');
+                      markerPlane.style.cssText = `
+                        position: absolute;
+                        bottom: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        width: 80px;
+                        height: 80px;
+                        background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+                        border: 3px solid #333;
+                        border-radius: 4px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 10px;
+                        font-weight: bold;
+                        color: #333;
+                        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                        pointer-events: none;
+                        z-index: 10;
+                      `;
+                      markerPlane.innerHTML = 'HIRO<br><span style="font-size:8px;font-weight:normal">Marcador</span>';
+                      el.shadowRoot?.appendChild(markerPlane);
+                    }
+                  }}
                   src={previewModelUrl}
                   camera-controls
-                  auto-rotate
                   shadow-intensity="1"
                   style={{ width: '100%', height: '100%', outline: 'none' }}
                   alt="Prévia do modelo 3D"
                 ></model-viewer>
+                {/* Marcador Hiro - Referência visual */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '20px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '80px',
+                  height: '80px',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%)',
+                  border: '3px solid #333',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  color: '#333',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                  textAlign: 'center',
+                  lineHeight: '1.2'
+                }}>
+                  HIRO<br /><span style={{ fontSize: '8px', fontWeight: 'normal' }}>Marcador</span>
+                </div>
+                {/* Eixos de referência XYZ */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  left: '10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  background: 'rgba(0,0,0,0.6)',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  color: 'white',
+                  fontFamily: 'monospace',
+                  pointerEvents: 'none'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: '#ff4444', fontWeight: 'bold' }}>X</span>
+                    <span style={{ width: '30px', height: '2px', background: '#ff4444' }}></span>
+                    <span style={{ fontSize: '10px', opacity: 0.7 }}>Vermelho</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: '#44ff44', fontWeight: 'bold' }}>Y</span>
+                    <span style={{ width: '30px', height: '2px', background: '#44ff44' }}></span>
+                    <span style={{ fontSize: '10px', opacity: 0.7 }}>Verde (Vertical)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: '#4444ff', fontWeight: 'bold' }}>Z</span>
+                    <span style={{ width: '30px', height: '2px', background: '#4444ff' }}></span>
+                    <span style={{ fontSize: '10px', opacity: 0.7 }}>Azul (Profundidade)</span>
+                  </div>
+                </div>
               </div>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
