@@ -361,23 +361,35 @@ export default function EditExhibit({ isAdmin }) {
                   ref={(viewer) => {
                     if (viewer) {
                       viewer.addEventListener('load', () => {
-                        // Get the model's scene to calculate bounding box
-                        const model = viewer.model;
-                        if (model) {
-                          const box = new THREE.Box3().setFromObject(model);
-                          const size = new THREE.Vector3();
-                          box.getSize(size);
-                          
-                          // Get the maximum dimension
-                          const maxDimension = Math.max(size.x, size.y, size.z);
-                          
-                          // Calculate scale factor to normalize to 0.16 units (Hiro marker size)
-                          const targetSize = 0.16;
-                          const scaleFactor = maxDimension > 0 ? targetSize / maxDimension : 1;
-                          
-                          // Apply the normalized scale to the model-viewer
-                          viewer.scale = `${scaleFactor} ${scaleFactor} ${scaleFactor}`;
-                        }
+                        // Wait for THREE.js to be available
+                        const checkThree = setInterval(() => {
+                          if (typeof THREE !== 'undefined') {
+                            clearInterval(checkThree);
+                            
+                            // Get the model's scene to calculate bounding box
+                            const model = viewer.model;
+                            if (model) {
+                              const box = new THREE.Box3().setFromObject(model);
+                              const size = new THREE.Vector3();
+                              box.getSize(size);
+                              
+                              // Get the maximum dimension
+                              const maxDimension = Math.max(size.x, size.y, size.z);
+                              
+                              // Calculate scale factor to normalize to 0.16 units (Hiro marker size)
+                              const targetSize = 0.16;
+                              const scaleFactor = maxDimension > 0 ? targetSize / maxDimension : 1;
+                              
+                              console.log('Model dimensions:', size.x, size.y, size.z);
+                              console.log('Max dimension:', maxDimension);
+                              console.log('Scale factor:', scaleFactor);
+                              
+                              // Apply the normalized scale using model-viewer's API
+                              // model-viewer uses a different approach - we scale the model itself
+                              model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                            }
+                          }
+                        }, 100);
                       });
                     }
                   }}
