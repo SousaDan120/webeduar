@@ -459,28 +459,19 @@
                 box.getSize(size)
                 box.getCenter(center)
 
-                // Read user offsets and overrides from database
-                const userScale = data.model_scale !== undefined && data.model_scale !== null ? data.model_scale : 1.0;
-                const userRot = data.model_rotation || { x: 0, y: 0, z: 0 };
-                const userPos = data.model_position || { x: 0, y: 0, z: 0 };
-
-                // Auto-fit scale logic: scale to target size (1.2 units) * userScale
+                // Auto-fit scale logic: scale to target size (1.2 units)
                 const maxDim = Math.max(size.x, size.y, size.z)
-                let scaleFactor = 1.0;
                 if (maxDim > 0) {
                   const targetSize = 1.2
-                  scaleFactor = (targetSize / maxDim) * userScale
+                  const scaleFactor = targetSize / maxDim
                   modelEntity.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`)
                   if (modelEntity.components['gesture-handler']) {
                     modelEntity.components['gesture-handler'].initialScale = new THREE.Vector3(scaleFactor, scaleFactor, scaleFactor);
                   }
                 }
 
-                // Apply rotation Y
-                modelEntity.setAttribute('rotation', `0 ${userRot.y || 0} 0`)
-
-                // Align model center horizontally (X and Z) and place base (min Y) on the marker, adding user pos offset
-                mesh.position.set(-center.x + userPos.x, -box.min.y + userPos.y, -center.z + userPos.z)
+                // Align model center horizontally (X and Z) and place base (min Y) on the marker
+                mesh.position.set(-center.x, -box.min.y, -center.z)
 
                 // Check animations
                 if (mesh.animations && mesh.animations.length > 0) {
