@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye, Maximize2 } from 'lucide-react'
+import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-// Load A-Frame for 3D preview
-if (!document.querySelector('script[src*="aframe"]')) {
+// Dynamically load Google Model Viewer component for 3D previewing
+if (!customElements.get('model-viewer')) {
   const script = document.createElement('script')
-  script.src = 'https://aframe.io/releases/1.4.2/aframe.min.js'
-  script.async = true
+  script.type = 'module'
+  script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js'
   document.head.appendChild(script)
 }
 
@@ -40,10 +40,6 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
-  
-  // 3D model positioning and scaling
-  const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.5, z: 0.2 })
-  const [modelScale, setModelScale] = useState(1)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -69,14 +65,6 @@ export default function EditExhibit({ isAdmin }) {
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
       setExhibitId(data.id)
-      
-      // Load 3D positioning and scaling if available
-      if (data.position) {
-        setModelPosition(data.position)
-      }
-      if (data.scale !== undefined) {
-        setModelScale(data.scale)
-      }
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
     } finally {
@@ -121,8 +109,6 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
-        position: modelPosition,
-        scale: modelScale,
       }
 
       let data, error
@@ -196,12 +182,6 @@ export default function EditExhibit({ isAdmin }) {
 
   // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
   const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
-
-  // Auto-adjust function to center model on marker
-  const autoAdjustModel = () => {
-    setModelPosition({ x: 0, y: 0.5, z: 0.2 })
-    setModelScale(1)
-  }
 
   if (fetching) return <p>Carregando...</p>
 
@@ -364,135 +344,20 @@ export default function EditExhibit({ isAdmin }) {
 
           {/* 3D Preview Card (at the bottom of the form) */}
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Eye size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
-              </div>
-              {previewModelUrl && (
-                <button
-                  type="button"
-                  onClick={autoAdjustModel}
-                  style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                  className="primary"
-                >
-                  <Maximize2 size={16} />
-                  Auto Ajuste
-                </button>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <Eye size={20} style={{ color: 'var(--primary)' }} />
+              <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
             </div>
-            
             {previewModelUrl ? (
-              <>
-                <div style={{ width: '100%', height: '400px', background: '#1a1a2e', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                  <a-scene
-                    embedded
-                    renderer="logarithmicDepthBuffer: true; antialias: true;"
-                    vr-mode-ui="enabled: false"
-                    style={{ width: '100%', height: '100%' }}
-                  >
-                    <a-assets>
-                      <a-asset-item id="model-asset" src={previewModelUrl}></a-asset-item>
-                    </a-assets>
-                    
-                    {/* Lighting */}
-                    <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
-                    <a-light type="directional" color="#ffffff" intensity="0.8" position="1 2 1"></a-light>
-                    
-                    {/* Hiro marker as reference background - positioned upright facing camera */}
-                    <a-image
-                      src="https://raw.githack.com/AR-js-org/AR.js/master/data/images/HIRO.jpg"
-                      position="0 0 -1"
-                      rotation="0 0 0"
-                      width="1"
-                      height="1"
-                      opacity="0.9"
-                    ></a-image>
-                    
-                    {/* Reference plane to show marker area */}
-                    <a-plane
-                      position="0 0 -0.99"
-                      rotation="0 0 0"
-                      width="1"
-                      height="1"
-                      color="#4169e1"
-                      opacity="0.2"
-                      material="side: double"
-                    ></a-plane>
-                    
-                    {/* 3D Model with positioning */}
-                    <a-entity
-                      gltf-model="#model-asset"
-                      position={`${modelPosition.x} ${modelPosition.y} ${modelPosition.z}`}
-                      scale={`${modelScale} ${modelScale} ${modelScale}`}
-                    ></a-entity>
-                    
-                    {/* Camera positioned to face the marker */}
-                    <a-entity camera position="0 0 2" look-controls="enabled: true"></a-entity>
-                  </a-scene>
-                </div>
-                
-                {/* Position and Scale Controls */}
-                <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem' }}>Ajustes de Posição e Escala</h4>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.3rem', color: 'var(--text-muted)' }}>Posição X</label>
-                      <input
-                        type="range"
-                        min="-1"
-                        max="1"
-                        step="0.05"
-                        value={modelPosition.x}
-                        onChange={(e) => setModelPosition({ ...modelPosition, x: parseFloat(e.target.value) })}
-                        style={{ width: '100%' }}
-                      />
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{modelPosition.x.toFixed(2)}</span>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.3rem', color: 'var(--text-muted)' }}>Posição Y</label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="2"
-                        step="0.05"
-                        value={modelPosition.y}
-                        onChange={(e) => setModelPosition({ ...modelPosition, y: parseFloat(e.target.value) })}
-                        style={{ width: '100%' }}
-                      />
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{modelPosition.y.toFixed(2)}</span>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.3rem', color: 'var(--text-muted)' }}>Posição Z</label>
-                      <input
-                        type="range"
-                        min="-1"
-                        max="1"
-                        step="0.05"
-                        value={modelPosition.z}
-                        onChange={(e) => setModelPosition({ ...modelPosition, z: parseFloat(e.target.value) })}
-                        style={{ width: '100%' }}
-                      />
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{modelPosition.z.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '0.3rem', color: 'var(--text-muted)' }}>Escala</label>
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="3"
-                      step="0.1"
-                      value={modelScale}
-                      onChange={(e) => setModelScale(parseFloat(e.target.value))}
-                      style={{ width: '100%' }}
-                    />
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{modelScale.toFixed(1)}x</span>
-                  </div>
-                </div>
-              </>
+              <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                <model-viewer
+                  src={previewModelUrl}
+                  camera-controls
+                  shadow-intensity="1"
+                  style={{ width: '100%', height: '100%', outline: 'none' }}
+                  alt="Prévia do modelo 3D"
+                ></model-viewer>
+              </div>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
                 <Box size={36} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
