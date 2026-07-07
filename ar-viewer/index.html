@@ -10,8 +10,6 @@
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <!-- AR.js (Marker tracking) -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <!-- Gesture Detector & Handler Libraries -->
-    <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
     <!-- A-Frame Extras for GLTF animation support -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <!-- Supabase JS -->
@@ -325,9 +323,8 @@
         <a-entity
           id="exhibit-model"
           class="cantap"
-          position="0 0.1 0"
+          position="0 0 0"
           scale="1 1 1"
-          gesture-handler="minScale: 0.15; maxScale: 3"
         ></a-entity>
       </a-marker>
 
@@ -448,36 +445,16 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
-            // After model loads, check for animations and normalize scale
+            // After model loads, apply scale from database and check for animations
             modelEntity.addEventListener('model-loaded', () => {
               const mesh = modelEntity.getObject3D('mesh')
               if (mesh && modelEntity.components['gltf-model']) {
-                // Use A-Frame's THREE reference
-                const THREE = window.AFRAME.THREE
-                
-                // Calculate bounding box to normalize scale to 0.16 units (Hiro marker size)
-                const box = new THREE.Box3().setFromObject(mesh)
-                const size = new THREE.Vector3()
-                box.getSize(size)
-                
-                // Get the maximum dimension
-                const maxDimension = Math.max(size.x, size.y, size.z)
-                
-                // Calculate scale factor to normalize to 0.16 units
-                const targetSize = 0.16
-                const scaleFactor = maxDimension > 0 ? targetSize / maxDimension : 1
-                
-                console.log('Model dimensions:', size.x, size.y, size.z)
-                console.log('Max dimension:', maxDimension)
-                console.log('Scale factor:', scaleFactor)
-                
-                // Apply the normalized scale
-                modelEntity.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`)
-                
-                // Center the model vertically
-                const center = new THREE.Vector3()
-                box.getCenter(center)
-                modelEntity.setAttribute('position', `0 ${-center.y * scaleFactor + 0.1} 0`)
+                // Apply scale from database
+                if (data.model_scale) {
+                  const scale = data.model_scale
+                  modelEntity.setAttribute('scale', `${scale} ${scale} ${scale}`)
+                  console.log('Applied scale from database:', scale)
+                }
                 
                 // Enable animation-mixer from aframe-extras
                 modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')

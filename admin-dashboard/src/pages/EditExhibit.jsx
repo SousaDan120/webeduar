@@ -12,10 +12,15 @@ if (!customElements.get('model-viewer')) {
   document.head.appendChild(script)
 }
 
-// Dynamically load THREE.js for bounding box calculations
+// Dynamically load THREE.js and GLTFLoader for scale calculation during upload
 if (typeof THREE === 'undefined') {
   const threeScript = document.createElement('script')
   threeScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+  threeScript.onload = () => {
+    const gltfLoaderScript = document.createElement('script')
+    gltfLoaderScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'
+    document.head.appendChild(gltfLoaderScript)
+  }
   document.head.appendChild(threeScript)
 }
 
@@ -46,6 +51,7 @@ export default function EditExhibit({ isAdmin }) {
   const [audioFile, setAudioFile] = useState(null)
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
+  const [modelScale, setModelScale] = useState(1)
   const [exhibitId, setExhibitId] = useState(id || null)
 
   useEffect(() => {
@@ -71,6 +77,7 @@ export default function EditExhibit({ isAdmin }) {
       })
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
+      setModelScale(data.model_scale || 1)
       setExhibitId(data.id)
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
@@ -88,6 +95,36 @@ export default function EditExhibit({ isAdmin }) {
     return data.publicUrl
   }
 
+  const calculateModelScale = async (modelUrl) => {
+    return new Promise((resolve) => {
+      const checkThree = setInterval(() => {
+        if (typeof THREE !== 'undefined') {
+          clearInterval(checkThree)
+          
+          const loader = new THREE.GLTFLoader()
+          loader.load(modelUrl, (gltf) => {
+            const model = gltf.scene
+            const box = new THREE.Box3().setFromObject(model)
+            const size = new THREE.Vector3()
+            box.getSize(size)
+            
+            const maxDimension = Math.max(size.x, size.y, size.z)
+            const targetSize = 0.16
+            const scaleFactor = maxDimension > 0 ? targetSize / maxDimension : 1
+            
+            console.log('Model dimensions:', size.x, size.y, size.z)
+            console.log('Calculated scale factor:', scaleFactor)
+            
+            resolve(scaleFactor)
+          }, undefined, (error) => {
+            console.error('Error loading model for scale calculation:', error)
+            resolve(1)
+          })
+        }
+      }, 100)
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -97,10 +134,19 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
+      let modelScale = 1
 
       if (modelFile) {
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
+        
+        // Calculate scale after upload
+        setSuccess('Calculando escala do modelo...')
+        modelScale = await calculateModelScale(finalModelUrl)
+      } else if (finalModelUrl && !isEditing) {
+        // Calculate scale for existing model when creating new exhibit
+        setSuccess('Calculando escala do modelo...')
+        modelScale = await calculateModelScale(finalModelUrl)
       }
 
       if (audioFile) {
@@ -116,6 +162,7 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
+        model_scale: modelScale,
       }
 
       let data, error
@@ -358,41 +405,6 @@ export default function EditExhibit({ isAdmin }) {
             {previewModelUrl ? (
               <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                 <model-viewer
-                  ref={(viewer) => {
-                    if (viewer) {
-                      viewer.addEventListener('load', () => {
-                        // Wait for THREE.js to be available
-                        const checkThree = setInterval(() => {
-                          if (typeof THREE !== 'undefined') {
-                            clearInterval(checkThree);
-                            
-                            // Get the model's scene to calculate bounding box
-                            const model = viewer.model;
-                            if (model) {
-                              const box = new THREE.Box3().setFromObject(model);
-                              const size = new THREE.Vector3();
-                              box.getSize(size);
-                              
-                              // Get the maximum dimension
-                              const maxDimension = Math.max(size.x, size.y, size.z);
-                              
-                              // Calculate scale factor to normalize to 0.16 units (Hiro marker size)
-                              const targetSize = 0.16;
-                              const scaleFactor = maxDimension > 0 ? targetSize / maxDimension : 1;
-                              
-                              console.log('Model dimensions:', size.x, size.y, size.z);
-                              console.log('Max dimension:', maxDimension);
-                              console.log('Scale factor:', scaleFactor);
-                              
-                              // Apply the normalized scale using model-viewer's API
-                              // model-viewer uses a different approach - we scale the model itself
-                              model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-                            }
-                          }
-                        }, 100);
-                      });
-                    }
-                  }}
                   src={previewModelUrl}
                   camera-controls
                   shadow-intensity="1"
