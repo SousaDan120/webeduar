@@ -353,6 +353,7 @@ export default function EditExhibit({ isAdmin }) {
                 <model-viewer
                   src={previewModelUrl}
                   camera-controls
+                  auto-rotate
                   shadow-intensity="1"
                   style={{ width: '100%', height: '100%', outline: 'none' }}
                   alt="Prévia do modelo 3D"
