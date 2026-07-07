@@ -111,11 +111,39 @@ export default function Dashboard({ isAdmin }) {
       alert('Apenas o administrador do sistema pode excluir exposições.')
       return
     }
-    if (!window.confirm('Tem certeza que deseja excluir esta exposição?')) return
+    if (!window.confirm('Tem certeza que deseja excluir esta exposição? Isso também apagará os arquivos de modelo 3D e áudio do armazenamento.')) return
 
     try {
+      // First, fetch the exhibit data to get file URLs
+      const { data: exhibit, error: fetchError } = await supabase
+        .from('exhibits')
+        .select('model_url, audio_url')
+        .eq('id', id)
+        .single()
+      
+      if (fetchError) throw fetchError
+
+      // Delete files from Supabase Storage if they exist
+      if (exhibit.model_url) {
+        const modelName = exhibit.model_url.split('/').pop()
+        const { error: modelError } = await supabase.storage
+          .from('models')
+          .remove([modelName])
+        if (modelError) console.error('Erro ao deletar modelo 3D:', modelError)
+      }
+
+      if (exhibit.audio_url) {
+        const audioName = exhibit.audio_url.split('/').pop()
+        const { error: audioError } = await supabase.storage
+          .from('audio')
+          .remove([audioName])
+        if (audioError) console.error('Erro ao deletar áudio:', audioError)
+      }
+
+      // Delete the exhibit record from database
       const { error } = await supabase.from('exhibits').delete().eq('id', id)
       if (error) throw error
+      
       setExhibits(exhibits.filter(e => e.id !== id))
       // Refresh storage metric after deletion
       calculateStorageUsage()
