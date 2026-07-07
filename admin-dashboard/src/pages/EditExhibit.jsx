@@ -95,8 +95,8 @@ export default function EditExhibit({ isAdmin }) {
         const size = box.getSize(new THREE.Vector3())
         const maxDimension = Math.max(size.x, size.y, size.z)
         
-        // Target size is 0.01 units
-        const targetSize = 0.01
+        // Target size is 1.0 units (1m in AR space)
+        const targetSize = 1.0
         const scale = targetSize / maxDimension
         
         URL.revokeObjectURL(url)
