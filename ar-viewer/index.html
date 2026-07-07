@@ -328,7 +328,7 @@
           position="0 0.1 0"
           scale="1 1 1"
           rotation="0 0 0"
-          gesture-handler="minScale: 0.15; maxScale: 3; enabledForUsers: true"
+          gesture-handler
         ></a-entity>
       </a-marker>
 
@@ -532,47 +532,60 @@
 
       // ── Manual rotation controls ───────────────────────
       let isDragging = false
-      let previousMousePosition = { x: 0, y: 0 }
+      let previousTouchPosition = { x: 0, y: 0 }
       let currentRotation = { x: 0, y: 0, z: 0 }
 
-      modelEntity.addEventListener('mousedown', (e) => {
-        isDragging = true
-        previousMousePosition = { x: e.clientX, y: e.clientY }
+      // Wait for model to be loaded before adding rotation controls
+      modelEntity.addEventListener('model-loaded', () => {
+        const initialRotation = modelEntity.getAttribute('rotation') || { x: 0, y: 0, z: 0 }
+        currentRotation = { ...initialRotation }
       })
 
+      // Touch events for rotation (single finger drag)
       modelEntity.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true
+          previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        }
+      }, { passive: true })
+
+      modelEntity.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length !== 1) return
+        
+        const deltaX = e.touches[0].clientX - previousTouchPosition.x
+        const deltaY = e.touches[0].clientY - previousTouchPosition.y
+        
+        currentRotation.y += deltaX * 0.3
+        currentRotation.x += deltaY * 0.3
+        
+        modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`)
+        
+        previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      }, { passive: true })
+
+      modelEntity.addEventListener('touchend', () => { isDragging = false })
+
+      // Mouse events for rotation (desktop)
+      modelEntity.addEventListener('mousedown', (e) => {
         isDragging = true
-        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        previousTouchPosition = { x: e.clientX, y: e.clientY }
       })
 
       document.addEventListener('mousemove', (e) => {
         if (!isDragging) return
-        const deltaX = e.clientX - previousMousePosition.x
-        const deltaY = e.clientY - previousMousePosition.y
         
-        currentRotation.y += deltaX * 0.5
-        currentRotation.x += deltaY * 0.5
+        const deltaX = e.clientX - previousTouchPosition.x
+        const deltaY = e.clientY - previousTouchPosition.y
         
-        modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`)
-        
-        previousMousePosition = { x: e.clientX, y: e.clientY }
-      })
-
-      document.addEventListener('touchmove', (e) => {
-        if (!isDragging) return
-        const deltaX = e.touches[0].clientX - previousMousePosition.x
-        const deltaY = e.touches[0].clientY - previousMousePosition.y
-        
-        currentRotation.y += deltaX * 0.5
-        currentRotation.x += deltaY * 0.5
+        currentRotation.y += deltaX * 0.3
+        currentRotation.x += deltaY * 0.3
         
         modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`)
         
-        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        previousTouchPosition = { x: e.clientX, y: e.clientY }
       })
 
       document.addEventListener('mouseup', () => { isDragging = false })
-      document.addEventListener('touchend', () => { isDragging = false })
 
       window.addEventListener('load', init)
     </script>
