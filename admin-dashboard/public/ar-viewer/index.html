@@ -325,7 +325,6 @@
           class="cantap"
           position="0 0 0"
           scale="1 1 1"
-          gesture-handler="minScale: 0.15; maxScale: 3"
         ></a-entity>
       </a-marker>
 
@@ -431,10 +430,6 @@
           // ── Info panel ─────────────────────────────────
           exhibitNameEl.textContent = data.name
           exhibitDescEl.textContent = data.description_text || ''
-
-          // ── Apply scale from database ─────────────────
-          const modelScale = data.scale || 1
-          modelEntity.setAttribute('scale', `${modelScale} ${modelScale} ${modelScale}`)
 
           // ── Load 3D model ──────────────────────────────
           if (data.model_url) {
