@@ -111,11 +111,42 @@ export default function Dashboard({ isAdmin }) {
       alert('Apenas o administrador do sistema pode excluir exposições.')
       return
     }
-    if (!window.confirm('Tem certeza que deseja excluir esta exposição?')) return
+    if (!window.confirm('Tem certeza que deseja excluir esta exposição? Isso também excluirá os arquivos de modelo 3D e áudio.')) return
 
     try {
+      // First, get the exhibit data to find file URLs
+      const { data: exhibit, error: fetchError } = await supabase
+        .from('exhibits')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+      if (fetchError) throw fetchError
+
+      // Delete model file from storage if exists
+      if (exhibit.model_url) {
+        const modelFileName = exhibit.model_url.split('/').pop()
+        const { error: modelError } = await supabase
+          .storage
+          .from('models')
+          .remove([modelFileName])
+        if (modelError) console.error('Erro ao excluir modelo:', modelError)
+      }
+
+      // Delete audio file from storage if exists
+      if (exhibit.audio_url) {
+        const audioFileName = exhibit.audio_url.split('/').pop()
+        const { error: audioError } = await supabase
+          .storage
+          .from('audio')
+          .remove([audioFileName])
+        if (audioError) console.error('Erro ao excluir áudio:', audioError)
+      }
+
+      // Delete the exhibit record from database
       const { error } = await supabase.from('exhibits').delete().eq('id', id)
       if (error) throw error
+      
       setExhibits(exhibits.filter(e => e.id !== id))
       // Refresh storage metric after deletion
       calculateStorageUsage()
