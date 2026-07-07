@@ -310,7 +310,7 @@
           class="cantap"
           position="0 0.1 0"
           scale="1 1 1"
-          gesture-handler="minScale: 0.2; maxScale: 2"
+          gesture-handler="minScale: 0.2; maxScale: 4"
         ></a-entity>
       </a-marker>
 
@@ -425,19 +425,28 @@
                 box.getSize(size)
                 box.getCenter(center)
 
-                // Auto-fit scale logic: scale to target size (1.2 units)
+                // Read user offsets and overrides from database
+                const userScale = data.model_scale !== undefined && data.model_scale !== null ? data.model_scale : 1.0;
+                const userRot = data.model_rotation || { x: 0, y: 0, z: 0 };
+                const userPos = data.model_position || { x: 0, y: 0.1, z: 0 };
+
+                // Auto-fit scale logic: scale to target size (1.2 units) * userScale
                 const maxDim = Math.max(size.x, size.y, size.z)
+                let scaleFactor = 1.0;
                 if (maxDim > 0) {
                   const targetSize = 1.2
-                  const scaleFactor = targetSize / maxDim
+                  scaleFactor = (targetSize / maxDim) * userScale
                   modelEntity.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`)
                   if (modelEntity.components['gesture-handler']) {
                     modelEntity.components['gesture-handler'].initialScale = new THREE.Vector3(scaleFactor, scaleFactor, scaleFactor);
                   }
                 }
 
-                // Align model center horizontally (X and Z) and place base (min Y) on the marker
-                obj.position.set(-center.x, -box.min.y, -center.z)
+                // Apply rotation Y
+                modelEntity.setAttribute('rotation', `0 ${userRot.y || 0} 0`)
+
+                // Align model center horizontally (X and Z) and place base (min Y) on the marker, adding user pos offset
+                obj.position.set(-center.x + userPos.x, -box.min.y + userPos.y, -center.z + userPos.z)
 
                 // Check animations on the raw THREE object
                 if (obj.animations && obj.animations.length > 0) {
