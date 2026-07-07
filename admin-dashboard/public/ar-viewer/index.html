@@ -308,7 +308,7 @@
         <a-entity
           id="exhibit-model"
           class="cantap"
-          position="0 0.5 0.2"
+          position="0 0.1 0"
           scale="1 1 1"
           gesture-handler="minScale: 0.15; maxScale: 3"
         ></a-entity>
@@ -413,14 +413,6 @@
             asset.setAttribute('src', modelUrl)
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
-
-            // Apply position and scale from database if available
-            if (data.position) {
-              modelEntity.setAttribute('position', `${data.position.x} ${data.position.y} ${data.position.z}`)
-            }
-            if (data.scale !== undefined) {
-              modelEntity.setAttribute('scale', `${data.scale} ${data.scale} ${data.scale}`)
-            }
 
             // After model loads, auto-enable animation-mixer if animations exist
             modelEntity.addEventListener('model-loaded', () => {

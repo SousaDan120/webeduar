@@ -12,6 +12,13 @@ if (!customElements.get('model-viewer')) {
   document.head.appendChild(script)
 }
 
+// Dynamically load THREE.js for bounding box calculations
+if (typeof THREE === 'undefined') {
+  const threeScript = document.createElement('script')
+  threeScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+  document.head.appendChild(threeScript)
+}
+
 // Define base viewer path without origin so we can construct it dynamically based on how the admin is accessing the panel
 const AR_VIEWER_PATH = '/ar-viewer/index.html'
 
@@ -351,6 +358,29 @@ export default function EditExhibit({ isAdmin }) {
             {previewModelUrl ? (
               <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                 <model-viewer
+                  ref={(viewer) => {
+                    if (viewer) {
+                      viewer.addEventListener('load', () => {
+                        // Get the model's scene to calculate bounding box
+                        const model = viewer.model;
+                        if (model) {
+                          const box = new THREE.Box3().setFromObject(model);
+                          const size = new THREE.Vector3();
+                          box.getSize(size);
+                          
+                          // Get the maximum dimension
+                          const maxDimension = Math.max(size.x, size.y, size.z);
+                          
+                          // Calculate scale factor to normalize to 0.16 units (Hiro marker size)
+                          const targetSize = 0.16;
+                          const scaleFactor = maxDimension > 0 ? targetSize / maxDimension : 1;
+                          
+                          // Apply the normalized scale to the model-viewer
+                          viewer.scale = `${scaleFactor} ${scaleFactor} ${scaleFactor}`;
+                        }
+                      });
+                    }
+                  }}
                   src={previewModelUrl}
                   camera-controls
                   shadow-intensity="1"
