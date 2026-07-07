@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -40,6 +42,7 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
+  const [modelScale, setModelScale] = useState(1)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -65,6 +68,7 @@ export default function EditExhibit({ isAdmin }) {
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
       setExhibitId(data.id)
+      setModelScale(data.model_scale || 1)
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
     } finally {
@@ -81,6 +85,29 @@ export default function EditExhibit({ isAdmin }) {
     return data.publicUrl
   }
 
+  const calculateModelScale = async (file) => {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const loader = new GLTFLoader()
+      
+      loader.load(url, (gltf) => {
+        const box = new THREE.Box3().setFromObject(gltf.scene)
+        const size = box.getSize(new THREE.Vector3())
+        const maxDimension = Math.max(size.x, size.y, size.z)
+        
+        // Target size is 1.0 units (1m in AR space)
+        const targetSize = 1.0
+        const scale = targetSize / maxDimension
+        
+        URL.revokeObjectURL(url)
+        resolve(scale)
+      }, undefined, (error) => {
+        URL.revokeObjectURL(url)
+        reject(error)
+      })
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -90,8 +117,13 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
+      let finalScale = modelScale
 
       if (modelFile) {
+        setSuccess('Calculando escala do modelo...')
+        finalScale = await calculateModelScale(modelFile)
+        setModelScale(finalScale)
+        
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
       }
@@ -109,6 +141,7 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
+        model_scale: finalScale,
       }
 
       let data, error
