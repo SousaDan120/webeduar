@@ -327,7 +327,8 @@
           class="cantap"
           position="0 0.1 0"
           scale="1 1 1"
-          gesture-handler="minScale: 0.15; maxScale: 3"
+          rotation="0 0 0"
+          gesture-handler="minScale: 0.15; maxScale: 3; enabledForUsers: true"
         ></a-entity>
       </a-marker>
 
@@ -434,11 +435,9 @@
           exhibitNameEl.textContent = data.name
           exhibitDescEl.textContent = data.description_text || ''
 
-          // ── Apply scale to model ───────────────────────
-          const scaleX = data.scale_x || 1
-          const scaleY = data.scale_y || 1
-          const scaleZ = data.scale_z || 1
-          modelEntity.setAttribute('scale', `${scaleX} ${scaleY} ${scaleZ}`)
+          // ── Apply model scale if saved ─────────────────
+          const savedScale = data.model_scale || 1
+          modelEntity.setAttribute('scale', `${savedScale} ${savedScale} ${savedScale}`)
 
           // ── Load 3D model ──────────────────────────────
           if (data.model_url) {
@@ -530,6 +529,50 @@
           animPaused = true
         }
       })
+
+      // ── Manual rotation controls ───────────────────────
+      let isDragging = false
+      let previousMousePosition = { x: 0, y: 0 }
+      let currentRotation = { x: 0, y: 0, z: 0 }
+
+      modelEntity.addEventListener('mousedown', (e) => {
+        isDragging = true
+        previousMousePosition = { x: e.clientX, y: e.clientY }
+      })
+
+      modelEntity.addEventListener('touchstart', (e) => {
+        isDragging = true
+        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      })
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return
+        const deltaX = e.clientX - previousMousePosition.x
+        const deltaY = e.clientY - previousMousePosition.y
+        
+        currentRotation.y += deltaX * 0.5
+        currentRotation.x += deltaY * 0.5
+        
+        modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`)
+        
+        previousMousePosition = { x: e.clientX, y: e.clientY }
+      })
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return
+        const deltaX = e.touches[0].clientX - previousMousePosition.x
+        const deltaY = e.touches[0].clientY - previousMousePosition.y
+        
+        currentRotation.y += deltaX * 0.5
+        currentRotation.x += deltaY * 0.5
+        
+        modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`)
+        
+        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      })
+
+      document.addEventListener('mouseup', () => { isDragging = false })
+      document.addEventListener('touchend', () => { isDragging = false })
 
       window.addEventListener('load', init)
     </script>

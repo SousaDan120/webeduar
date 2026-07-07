@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye, Lock, Unlock } from 'lucide-react'
+import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -35,18 +35,14 @@ export default function EditExhibit({ isAdmin }) {
     name: '',
     description_text: '',
     marker_id: '1',
-    scale_x: 1,
-    scale_y: 1,
-    scale_z: 1,
   })
-
-  const [uniformScale, setUniformScale] = useState(true)
 
   const [modelFile, setModelFile] = useState(null)
   const [audioFile, setAudioFile] = useState(null)
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
+  const [modelScale, setModelScale] = useState(1)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -68,13 +64,11 @@ export default function EditExhibit({ isAdmin }) {
         name: data.name,
         description_text: data.description_text || '',
         marker_id: data.marker_id || '1',
-        scale_x: data.scale_x || 1,
-        scale_y: data.scale_y || 1,
-        scale_z: data.scale_z || 1,
       })
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
       setExhibitId(data.id)
+      setModelScale(data.model_scale || 1)
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
     } finally {
@@ -91,32 +85,25 @@ export default function EditExhibit({ isAdmin }) {
     return data.publicUrl
   }
 
-  // Calculate normalized scale to fit model within 0.3x0.3x0.3 meter bounding box
-  const calculateNormalizedScale = async (file) => {
-    return new Promise((resolve) => {
+  const calculateModelScale = async (file) => {
+    return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file)
-      const loader = new THREE.GLTFLoader()
+      const loader = new GLTFLoader()
       
       loader.load(url, (gltf) => {
         const box = new THREE.Box3().setFromObject(gltf.scene)
         const size = box.getSize(new THREE.Vector3())
+        const maxDimension = Math.max(size.x, size.y, size.z)
         
-        // Target max size is 0.3 meters
-        const targetSize = 0.3
-        const maxDim = Math.max(size.x, size.y, size.z)
-        
-        // Calculate scale to fit within target size
-        const normalizedScale = maxDim > 0 ? targetSize / maxDim : 1
-        
-        // Clamp scale to reasonable range (0.01 to 5)
-        const clampedScale = Math.max(0.01, Math.min(5, normalizedScale))
+        // Target size is 0.01 units
+        const targetSize = 0.01
+        const scale = targetSize / maxDimension
         
         URL.revokeObjectURL(url)
-        resolve(clampedScale)
-      }, undefined, () => {
-        // On error, default to scale 1
+        resolve(scale)
+      }, undefined, (error) => {
         URL.revokeObjectURL(url)
-        resolve(1)
+        reject(error)
       })
     })
   }
@@ -130,20 +117,15 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
+      let finalScale = modelScale
 
       if (modelFile) {
+        setSuccess('Calculando escala do modelo...')
+        finalScale = await calculateModelScale(modelFile)
+        setModelScale(finalScale)
+        
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
-        
-        // Auto-normalize scale for new model uploads
-        setSuccess('Calculando escala normalizada...')
-        const normalizedScale = await calculateNormalizedScale(modelFile)
-        setForm(prev => ({
-          ...prev,
-          scale_x: normalizedScale,
-          scale_y: normalizedScale,
-          scale_z: normalizedScale
-        }))
       }
 
       if (audioFile) {
@@ -159,25 +141,25 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
-        scale_x: form.scale_x,
-        scale_y: form.scale_y,
-        scale_z: form.scale_z,
+        model_scale: finalScale,
       }
 
       let data, error
       if (isEditing) {
-        ({ data, error } = await supabase
+        const result = await supabase
           .from('exhibits')
           .update(payload)
           .eq('id', id)
           .select()
-          .single())
+          .single()
+        ;({ data, error } = result)
       } else {
-        ({ data, error } = await supabase
+        const result = await supabase
           .from('exhibits')
           .insert(payload)
           .select()
-          .single())
+          .single()
+        ;({ data, error } = result)
       }
 
       if (error) throw error
@@ -389,140 +371,36 @@ export default function EditExhibit({ isAdmin }) {
               </div>
             )}
 
-            {/* Scale Controls */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <label style={{ fontWeight: 600 }}>Escala do Modelo 3D</label>
-                <button
-                  type="button"
-                  onClick={() => setUniformScale(!uniformScale)}
-                  style={{ 
-                    background: 'transparent', 
-                    border: '1px solid var(--border-color)', 
-                    borderRadius: '6px', 
-                    padding: '0.4rem 0.6rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    fontSize: '0.85rem'
-                  }}
-                  title={uniformScale ? 'Escala uniforme ativada' : 'Escala uniforme desativada'}
-                >
-                  {uniformScale ? <Lock size={14} /> : <Unlock size={14} />}
-                  {uniformScale ? 'Uniforme' : 'Livre'}
-                </button>
-              </div>
-              
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
-                {/* X Scale */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Eixo X</span>
-                    <span style={{ fontWeight: 600 }}>{form.scale_x.toFixed(2)}x</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.01"
-                    max="5"
-                    step="0.01"
-                    value={form.scale_x}
-                    onChange={(e) => {
-                      const newVal = parseFloat(e.target.value)
-                      if (uniformScale) {
-                        setForm({ ...form, scale_x: newVal, scale_y: newVal, scale_z: newVal })
-                      } else {
-                        setForm({ ...form, scale_x: newVal })
-                      }
-                    }}
-                    style={{ width: '100%', cursor: 'pointer' }}
-                  />
-                </div>
-
-                {/* Y Scale */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Eixo Y</span>
-                    <span style={{ fontWeight: 600 }}>{form.scale_y.toFixed(2)}x</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.01"
-                    max="5"
-                    step="0.01"
-                    value={form.scale_y}
-                    onChange={(e) => {
-                      const newVal = parseFloat(e.target.value)
-                      if (uniformScale) {
-                        setForm({ ...form, scale_x: newVal, scale_y: newVal, scale_z: newVal })
-                      } else {
-                        setForm({ ...form, scale_y: newVal })
-                      }
-                    }}
-                    style={{ width: '100%', cursor: 'pointer' }}
-                  />
-                </div>
-
-                {/* Z Scale */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Eixo Z</span>
-                    <span style={{ fontWeight: 600 }}>{form.scale_z.toFixed(2)}x</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.01"
-                    max="5"
-                    step="0.01"
-                    value={form.scale_z}
-                    onChange={(e) => {
-                      const newVal = parseFloat(e.target.value)
-                      if (uniformScale) {
-                        setForm({ ...form, scale_x: newVal, scale_y: newVal, scale_z: newVal })
-                      } else {
-                        setForm({ ...form, scale_z: newVal })
-                      }
-                    }}
-                    style={{ width: '100%', cursor: 'pointer' }}
-                  />
-                </div>
-              </div>
-              
-              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block' }}>
-                Ajuste a escala do modelo 3D. Use o modo uniforme para manter proporções.
-              </small>
-            </div>
-
-            {/* 3D Preview Card */}
-            <div className="card" style={{ marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <Eye size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
-              </div>
-              {previewModelUrl ? (
-                <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                  <model-viewer
-                    src={previewModelUrl}
-                    camera-controls
-                    auto-rotate
-                    shadow-intensity="1"
-                    style={{ width: '100%', height: '100%', outline: 'none' }}
-                    alt="Prévia do modelo 3D"
-                  ></model-viewer>
-                </div>
-              ) : (
-                <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
-                  <Box size={36} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
-                  <p style={{ fontSize: '0.9rem' }}>Envie um modelo 3D (.glb) para ver a prévia interativa aqui.</p>
-                </div>
-              )}
-            </div>
-
             <button type="submit" className="primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '0.9rem' }}>
               <Save size={18} />
               {loading ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Criar Exposição')}
             </button>
           </form>
+
+          {/* 3D Preview Card (at the bottom of the form) */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              <Eye size={20} style={{ color: 'var(--primary)' }} />
+              <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
+            </div>
+            {previewModelUrl ? (
+              <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                <model-viewer
+                  src={previewModelUrl}
+                  camera-controls
+                  auto-rotate
+                  shadow-intensity="1"
+                  style={{ width: '100%', height: '100%', outline: 'none' }}
+                  alt="Prévia do modelo 3D"
+                ></model-viewer>
+              </div>
+            ) : (
+              <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
+                <Box size={36} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
+                <p style={{ fontSize: '0.9rem' }}>Envie um modelo 3D (.glb) para ver a prévia interativa aqui.</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right column: QR Code and Marker Panels */}
