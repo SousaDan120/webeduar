@@ -5,9 +5,10 @@ import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lu
 import { supabase } from '../lib/supabase'
 
 // Dynamically load Google Model Viewer component for 3D previewing
-if (!customElements.get('model-viewer')) {
+if (!document.querySelector('script[data-mv]')) {
   const script = document.createElement('script')
   script.type = 'module'
+  script.dataset.mv = '1'
   script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js'
   document.head.appendChild(script)
 }
@@ -24,8 +25,13 @@ export default function EditExhibit({ isAdmin }) {
   const qrRef = useRef(null)
   const markerImgRef = useRef(null)
   const modelViewerRef = useRef(null)
-  // Track if Hiro plane was already added to avoid duplicates
+  // Callback ref so we always get the actual DOM element even on re-renders
+  const setMvRef = (el) => { modelViewerRef.current = el }
+  // Track the Hiro plane mesh to avoid duplicates
   const hiroPlaneRef = useRef(null)
+
+  // true when the <model-viewer> custom element is fully registered
+  const [mvReady, setMvReady] = useState(() => customElements.get('model-viewer') !== undefined)
 
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(isEditing)
@@ -92,6 +98,13 @@ export default function EditExhibit({ isAdmin }) {
       setFetching(false)
     }
   }
+
+  // Wait for the <model-viewer> custom element to be registered before rendering it.
+  // This avoids a race condition where React renders the element before the module script loads.
+  useEffect(() => {
+    if (mvReady) return
+    customElements.whenDefined('model-viewer').then(() => setMvReady(true))
+  }, [])
 
   // ── Hiro Plane injection ───────────────────────────────────────────────────
   // Injects a flat plane representing the physical Hiro marker into the
@@ -469,18 +482,23 @@ export default function EditExhibit({ isAdmin }) {
             {previewModelUrl ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-                {/* model-viewer canvas */}
+                {/* model-viewer canvas — only mount after custom element is defined */}
                 <div style={{ width: '100%', height: '340px', background: '#0f172a', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                  <model-viewer
-                    ref={modelViewerRef}
-                    src={previewModelUrl}
-                    camera-controls
-                    shadow-intensity="1"
-                    style={{ width: '100%', height: '100%', outline: 'none' }}
-                    alt="Prévia do modelo 3D"
-                    orientation={`0deg ${modelRotationY}deg 0deg`}
-                    scale={`${modelScale} ${modelScale} ${modelScale}`}
-                  />
+                  {mvReady ? (
+                    <model-viewer
+                      ref={setMvRef}
+                      src={previewModelUrl}
+                      camera-controls
+                      shadow-intensity="1"
+                      style={{ width: '100%', height: '100%', outline: 'none', background: 'transparent' }}
+                      alt="Prévia do modelo 3D"
+                      orientation={`0deg ${modelRotationY}deg 0deg`}
+                    ></model-viewer>
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+                      Carregando visualizador 3D...
+                    </div>
+                  )}
                   {/* Overlay hint */}
                   <div style={{ position: 'absolute', bottom: '0.5rem', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.55)', borderRadius: '999px', padding: '0.25rem 0.75rem', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
                     🟫 Quadrado branco = marcador Hiro físico
