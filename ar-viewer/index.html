@@ -10,6 +10,8 @@
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <!-- AR.js (Marker tracking) -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <!-- Gesture Detector & Handler Libraries -->
+    <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
     <!-- A-Frame Extras for GLTF animation support -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <!-- Supabase JS -->
@@ -323,8 +325,9 @@
         <a-entity
           id="exhibit-model"
           class="cantap"
-          position="0 0 0"
+          position="0 0.1 0"
           scale="1 1 1"
+          gesture-handler="minScale: 0.15; maxScale: 3"
         ></a-entity>
       </a-marker>
 
@@ -431,6 +434,10 @@
           exhibitNameEl.textContent = data.name
           exhibitDescEl.textContent = data.description_text || ''
 
+          // ── Apply scale from database ─────────────────
+          const modelScale = data.scale || 1
+          modelEntity.setAttribute('scale', `${modelScale} ${modelScale} ${modelScale}`)
+
           // ── Load 3D model ──────────────────────────────
           if (data.model_url) {
             loadingStatus.textContent = 'Carregando modelo 3D...'
@@ -445,17 +452,10 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
-            // After model loads, apply scale from database and check for animations
+            // After model loads, check for animations
             modelEntity.addEventListener('model-loaded', () => {
               const mesh = modelEntity.getObject3D('mesh')
               if (mesh && modelEntity.components['gltf-model']) {
-                // Apply scale from database
-                if (data.model_scale) {
-                  const scale = data.model_scale
-                  modelEntity.setAttribute('scale', `${scale} ${scale} ${scale}`)
-                  console.log('Applied scale from database:', scale)
-                }
-                
                 // Enable animation-mixer from aframe-extras
                 modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')
                 hasAnimations = true

@@ -12,18 +12,6 @@ if (!customElements.get('model-viewer')) {
   document.head.appendChild(script)
 }
 
-// Dynamically load THREE.js and GLTFLoader for scale calculation during upload
-if (typeof THREE === 'undefined') {
-  const threeScript = document.createElement('script')
-  threeScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
-  threeScript.onload = () => {
-    const gltfLoaderScript = document.createElement('script')
-    gltfLoaderScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'
-    document.head.appendChild(gltfLoaderScript)
-  }
-  document.head.appendChild(threeScript)
-}
-
 // Define base viewer path without origin so we can construct it dynamically based on how the admin is accessing the panel
 const AR_VIEWER_PATH = '/ar-viewer/index.html'
 
@@ -45,14 +33,15 @@ export default function EditExhibit({ isAdmin }) {
     name: '',
     description_text: '',
     marker_id: '1',
+    scale: 1,
   })
 
   const [modelFile, setModelFile] = useState(null)
   const [audioFile, setAudioFile] = useState(null)
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
-  const [modelScale, setModelScale] = useState(1)
   const [exhibitId, setExhibitId] = useState(id || null)
+  const [previewScale, setPreviewScale] = useState(1)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -74,10 +63,11 @@ export default function EditExhibit({ isAdmin }) {
         name: data.name,
         description_text: data.description_text || '',
         marker_id: data.marker_id || '1',
+        scale: data.scale || 1,
       })
+      setPreviewScale(data.scale || 1)
       setModelUrl(data.model_url)
       setAudioUrl(data.audio_url)
-      setModelScale(data.model_scale || 1)
       setExhibitId(data.id)
     } catch (err) {
       setError('Erro ao carregar exposição: ' + err.message)
@@ -95,36 +85,6 @@ export default function EditExhibit({ isAdmin }) {
     return data.publicUrl
   }
 
-  const calculateModelScale = async (modelUrl) => {
-    return new Promise((resolve) => {
-      const checkThree = setInterval(() => {
-        if (typeof THREE !== 'undefined') {
-          clearInterval(checkThree)
-          
-          const loader = new THREE.GLTFLoader()
-          loader.load(modelUrl, (gltf) => {
-            const model = gltf.scene
-            const box = new THREE.Box3().setFromObject(model)
-            const size = new THREE.Vector3()
-            box.getSize(size)
-            
-            const maxDimension = Math.max(size.x, size.y, size.z)
-            const targetSize = 0.16
-            const scaleFactor = maxDimension > 0 ? targetSize / maxDimension : 1
-            
-            console.log('Model dimensions:', size.x, size.y, size.z)
-            console.log('Calculated scale factor:', scaleFactor)
-            
-            resolve(scaleFactor)
-          }, undefined, (error) => {
-            console.error('Error loading model for scale calculation:', error)
-            resolve(1)
-          })
-        }
-      }, 100)
-    })
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -134,19 +94,10 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
-      let modelScale = 1
 
       if (modelFile) {
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
-        
-        // Calculate scale after upload
-        setSuccess('Calculando escala do modelo...')
-        modelScale = await calculateModelScale(finalModelUrl)
-      } else if (finalModelUrl && !isEditing) {
-        // Calculate scale for existing model when creating new exhibit
-        setSuccess('Calculando escala do modelo...')
-        modelScale = await calculateModelScale(finalModelUrl)
       }
 
       if (audioFile) {
@@ -162,7 +113,7 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
-        model_scale: modelScale,
+        scale: previewScale,
       }
 
       let data, error
@@ -403,15 +354,74 @@ export default function EditExhibit({ isAdmin }) {
               <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
             </div>
             {previewModelUrl ? (
-              <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                <model-viewer
-                  src={previewModelUrl}
-                  camera-controls
-                  shadow-intensity="1"
-                  style={{ width: '100%', height: '100%', outline: 'none' }}
-                  alt="Prévia do modelo 3D"
-                ></model-viewer>
-              </div>
+              <>
+                {/* Scale control */}
+                <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ fontWeight: 600, fontSize: '0.9rem' }}>Escala do Modelo</label>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'var(--border-color)', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
+                      {previewScale.toFixed(2)}x
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="3"
+                    step="0.1"
+                    value={previewScale}
+                    onChange={(e) => setPreviewScale(parseFloat(e.target.value))}
+                    style={{ width: '100%', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    <span>0.1x (muito pequeno)</span>
+                    <span>3x (muito grande)</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
+                    💡 O marcador Hiro tem 16cm (0.16m). Ajuste a escala para que o modelo fique proporcional ao marcador.
+                  </p>
+                </div>
+
+                {/* 3D Viewer with marker reference */}
+                <div style={{ width: '100%', height: '380px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                  <model-viewer
+                    src={previewModelUrl}
+                    camera-controls
+                    shadow-intensity="1"
+                    style={{ width: '100%', height: '100%', outline: 'none' }}
+                    alt="Prévia do modelo 3D"
+                  ></model-viewer>
+                  
+                  {/* Marker reference overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '1rem',
+                    left: '1rem',
+                    background: 'rgba(15, 23, 42, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: 'white',
+                    fontSize: '0.8rem',
+                    zIndex: 10
+                  }}>
+                    <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>📐 Referência: Marcador Hiro</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        border: '2px solid #4169e1',
+                        background: 'rgba(65, 105, 225, 0.2)',
+                        borderRadius: '2px'
+                      }}></div>
+                      <div>
+                        <div>16cm x 16cm</div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>0.16m x 0.16m</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
                 <Box size={36} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
