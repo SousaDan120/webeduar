@@ -365,16 +365,16 @@ export default function EditExhibit({ isAdmin }) {
                   </div>
                   <input
                     type="range"
-                    min="0.1"
-                    max="3"
-                    step="0.1"
+                    min="0.01"
+                    max="10"
+                    step="0.01"
                     value={previewScale}
                     onChange={(e) => setPreviewScale(parseFloat(e.target.value))}
                     style={{ width: '100%', cursor: 'pointer' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                    <span>0.1x (muito pequeno)</span>
-                    <span>3x (muito grande)</span>
+                    <span>0.01x (muito pequeno)</span>
+                    <span>10x (muito grande)</span>
                   </div>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
                     💡 O marcador Hiro tem 16cm (0.16m). Ajuste a escala para que o modelo fique proporcional ao marcador.
@@ -389,6 +389,7 @@ export default function EditExhibit({ isAdmin }) {
                     shadow-intensity="1"
                     style={{ width: '100%', height: '100%', outline: 'none' }}
                     alt="Prévia do modelo 3D"
+                    scale={`${previewScale} ${previewScale} ${previewScale}`}
                   ></model-viewer>
                   
                   {/* Marker reference overlay */}
