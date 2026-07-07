@@ -414,6 +414,14 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
+            // Apply position and scale from database if available
+            if (data.position) {
+              modelEntity.setAttribute('position', `${data.position.x} ${data.position.y} ${data.position.z}`)
+            }
+            if (data.scale !== undefined) {
+              modelEntity.setAttribute('scale', `${data.scale} ${data.scale} ${data.scale}`)
+            }
+
             // After model loads, auto-enable animation-mixer if animations exist
             modelEntity.addEventListener('model-loaded', () => {
               const obj  = modelEntity.getObject3D('mesh')
