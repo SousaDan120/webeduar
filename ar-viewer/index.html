@@ -325,8 +325,8 @@
         <a-entity
           id="exhibit-model"
           class="cantap"
-          position="0 0.1 0"
           scale="1 1 1"
+          gesture-handler
         ></a-entity>
       </a-marker>
 
@@ -527,97 +527,6 @@
           animPaused = true
         }
       })
-
-      // ── Manual rotation and scale controls ─────────────
-      let isDragging = false
-      let isPinching = false
-      let previousTouchPosition = { x: 0, y: 0 }
-      let initialPinchDistance = 0
-      let currentRotation = { x: 0, y: 0, z: 0 }
-      let currentScale = 1
-
-      // Wait for model to be loaded before adding controls
-      modelEntity.addEventListener('model-loaded', () => {
-        const initialRotation = modelEntity.getAttribute('rotation') || { x: 0, y: 0, z: 0 }
-        const initialScale = modelEntity.getAttribute('scale') || { x: 1, y: 1, z: 1 }
-        currentRotation = { ...initialRotation }
-        currentScale = initialScale.x
-      })
-
-      // Touch events
-      modelEntity.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          isDragging = true
-          previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-        } else if (e.touches.length === 2) {
-          isPinching = true
-          isDragging = false
-          initialPinchDistance = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          )
-        }
-      }, { passive: true })
-
-      modelEntity.addEventListener('touchmove', (e) => {
-        if (isDragging && e.touches.length === 1) {
-          const deltaX = e.touches[0].clientX - previousTouchPosition.x
-          const deltaY = e.touches[0].clientY - previousTouchPosition.y
-          
-          currentRotation.y += deltaX * 0.5
-          currentRotation.x += deltaY * 0.5
-          
-          modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`)
-          
-          previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-        } else if (isPinching && e.touches.length === 2) {
-          const currentPinchDistance = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          )
-          const scaleChange = currentPinchDistance / initialPinchDistance
-          currentScale = Math.max(0.1, Math.min(5, currentScale * scaleChange))
-          modelEntity.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`)
-          initialPinchDistance = currentPinchDistance
-        }
-      }, { passive: true })
-
-      modelEntity.addEventListener('touchend', (e) => {
-        if (e.touches.length === 0) {
-          isDragging = false
-          isPinching = false
-        }
-      })
-
-      // Mouse events for rotation (desktop)
-      modelEntity.addEventListener('mousedown', (e) => {
-        isDragging = true
-        previousTouchPosition = { x: e.clientX, y: e.clientY }
-      })
-
-      document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return
-        
-        const deltaX = e.clientX - previousTouchPosition.x
-        const deltaY = e.clientY - previousTouchPosition.y
-        
-        currentRotation.y += deltaX * 0.5
-        currentRotation.x += deltaY * 0.5
-        
-        modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`)
-        
-        previousTouchPosition = { x: e.clientX, y: e.clientY }
-      })
-
-      document.addEventListener('mouseup', () => { isDragging = false })
-
-      // Mouse wheel for scale (desktop)
-      modelEntity.addEventListener('wheel', (e) => {
-        e.preventDefault()
-        const scaleChange = e.deltaY > 0 ? 0.9 : 1.1
-        currentScale = Math.max(0.1, Math.min(5, currentScale * scaleChange))
-        modelEntity.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`)
-      }, { passive: false })
 
       window.addEventListener('load', init)
     </script>
