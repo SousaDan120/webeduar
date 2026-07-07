@@ -42,7 +42,7 @@ export default function EditExhibit({ isAdmin }) {
   const [exhibitId, setExhibitId] = useState(id || null)
   
   // 3D model positioning and scaling
-  const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.1, z: 0 })
+  const [modelPosition, setModelPosition] = useState({ x: 0, y: 0.5, z: 0.2 })
   const [modelScale, setModelScale] = useState(1)
 
   useEffect(() => {
@@ -199,7 +199,7 @@ export default function EditExhibit({ isAdmin }) {
 
   // Auto-adjust function to center model on marker
   const autoAdjustModel = () => {
-    setModelPosition({ x: 0, y: 0.1, z: 0 })
+    setModelPosition({ x: 0, y: 0.5, z: 0.2 })
     setModelScale(1)
   }
 
@@ -395,24 +395,28 @@ export default function EditExhibit({ isAdmin }) {
                       <a-asset-item id="model-asset" src={previewModelUrl}></a-asset-item>
                     </a-assets>
                     
-                    {/* Hiro marker as reference background */}
+                    {/* Lighting */}
+                    <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+                    <a-light type="directional" color="#ffffff" intensity="0.8" position="1 2 1"></a-light>
+                    
+                    {/* Hiro marker as reference background - positioned upright facing camera */}
                     <a-image
                       src="https://raw.githack.com/AR-js-org/AR.js/master/data/images/HIRO.jpg"
-                      position="0 0 -2"
-                      rotation="-90 0 0"
+                      position="0 0 -1"
+                      rotation="0 0 0"
                       width="1"
                       height="1"
-                      opacity="0.8"
+                      opacity="0.9"
                     ></a-image>
                     
                     {/* Reference plane to show marker area */}
                     <a-plane
-                      position="0 0 -1.99"
-                      rotation="-90 0 0"
+                      position="0 0 -0.99"
+                      rotation="0 0 0"
                       width="1"
                       height="1"
                       color="#4169e1"
-                      opacity="0.3"
+                      opacity="0.2"
                       material="side: double"
                     ></a-plane>
                     
@@ -423,8 +427,8 @@ export default function EditExhibit({ isAdmin }) {
                       scale={`${modelScale} ${modelScale} ${modelScale}`}
                     ></a-entity>
                     
-                    {/* Camera */}
-                    <a-entity camera position="0 1.6 3" look-controls="enabled: true"></a-entity>
+                    {/* Camera positioned to face the marker */}
+                    <a-entity camera position="0 0 2" look-controls="enabled: true"></a-entity>
                   </a-scene>
                 </div>
                 
