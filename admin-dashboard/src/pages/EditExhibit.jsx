@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import * as THREE from 'three'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -41,7 +40,6 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
-  const [boundingBox, setBoundingBox] = useState(null)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -184,36 +182,6 @@ export default function EditExhibit({ isAdmin }) {
 
   // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
   const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
-
-  // Handle model load to calculate bounding box
-  const handleModelLoad = (event) => {
-    const model = event.target
-    try {
-      // Get the model's scene and calculate bounding box
-      const scene = model.model?.scene || model.model
-      if (scene) {
-        const box = new THREE.Box3().setFromObject(scene)
-        const size = box.getSize(new THREE.Vector3())
-        setBoundingBox({
-          width: size.x.toFixed(4),
-          height: size.y.toFixed(4),
-          depth: size.z.toFixed(4),
-          center: {
-            x: box.getCenter(new THREE.Vector3()).x.toFixed(4),
-            y: box.getCenter(new THREE.Vector3()).y.toFixed(4),
-            z: box.getCenter(new THREE.Vector3()).z.toFixed(4)
-          }
-        })
-      }
-    } catch (err) {
-      console.error('Error calculating bounding box:', err)
-    }
-  }
-
-  // Reset bounding box when model changes
-  useEffect(() => {
-    setBoundingBox(null)
-  }, [previewModelUrl])
 
   if (fetching) return <p>Carregando...</p>
 
@@ -389,7 +357,6 @@ export default function EditExhibit({ isAdmin }) {
                   shadow-intensity="1"
                   style={{ width: '100%', height: '100%', outline: 'none' }}
                   alt="Prévia do modelo 3D"
-                  onLoad={handleModelLoad}
                 ></model-viewer>
               </div>
             ) : (
@@ -399,36 +366,6 @@ export default function EditExhibit({ isAdmin }) {
               </div>
             )}
           </div>
-
-          {/* Bounding Box Info Card */}
-          {boundingBox && (
-            <div className="card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <Box size={20} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ margin: 0 }}>Dimensões do Modelo 3D</h3>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                <div style={{ background: 'var(--bg-color)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>Largura (X)</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>{boundingBox.width}</div>
-                </div>
-                <div style={{ background: 'var(--bg-color)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>Altura (Y)</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>{boundingBox.height}</div>
-                </div>
-                <div style={{ background: 'var(--bg-color)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>Profundidade (Z)</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)' }}>{boundingBox.depth}</div>
-                </div>
-              </div>
-              <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(65, 105, 225, 0.05)', borderRadius: '6px', border: '1px solid rgba(65, 105, 225, 0.2)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>Centro do Modelo</div>
-                <div style={{ fontSize: '0.85rem', fontFamily: 'monospace', color: 'var(--text-color)' }}>
-                  X: {boundingBox.center.x} | Y: {boundingBox.center.y} | Z: {boundingBox.center.z}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right column: QR Code and Marker Panels */}
