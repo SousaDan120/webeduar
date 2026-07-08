@@ -63,36 +63,65 @@ export default function EditExhibit({ isAdmin }) {
 
   // Calculate bounding box when model loads
   useEffect(() => {
-    if (!previewModelUrl || !viewerRef.current || !window.THREE) return
+    if (!previewModelUrl || !viewerRef.current) return
 
     const viewer = viewerRef.current
+    
     const handleLoad = () => {
-      try {
-        const model = viewer.model
-        if (!model) return
+      setTimeout(() => {
+        try {
+          // Try to get the model from the viewer's scene
+          const scene = viewer.scene || viewer.querySelector('model-viewer')?.scene
+          if (!scene) {
+            console.log('Scene not available yet')
+            return
+          }
 
-        const box = new window.THREE.Box3().setFromObject(model)
-        const size = box.getSize(new window.THREE.Vector3())
-        
-        setBoundingBox({
-          width: size.x.toFixed(2),
-          height: size.y.toFixed(2),
-          depth: size.z.toFixed(2)
-        })
-      } catch (err) {
-        console.error('Error calculating bounding box:', err)
-      }
+          // Get all meshes in the scene
+          const meshes = []
+          scene.traverse((child) => {
+            if (child.isMesh) {
+              meshes.push(child)
+            }
+          })
+
+          if (meshes.length === 0) {
+            console.log('No meshes found in scene')
+            return
+          }
+
+          // Calculate bounding box from all meshes
+          if (window.THREE) {
+            const box = new window.THREE.Box3()
+            meshes.forEach(mesh => {
+              box.expandByObject(mesh)
+            })
+            
+            const size = box.getSize(new window.THREE.Vector3())
+            
+            setBoundingBox({
+              width: Math.abs(size.x).toFixed(2),
+              height: Math.abs(size.y).toFixed(2),
+              depth: Math.abs(size.z).toFixed(2)
+            })
+            
+            console.log('Bounding box calculated:', size)
+          }
+        } catch (err) {
+          console.error('Error calculating bounding box:', err)
+        }
+      }, 500) // Small delay to ensure model is fully loaded
     }
 
+    // Listen for the load event
     viewer.addEventListener('load', handleLoad)
     
-    // If model is already loaded
-    if (viewer.model) {
-      handleLoad()
-    }
+    // Also try after a delay in case the event already fired
+    const timeoutId = setTimeout(handleLoad, 1000)
 
     return () => {
       viewer.removeEventListener('load', handleLoad)
+      clearTimeout(timeoutId)
     }
   }, [previewModelUrl])
 
