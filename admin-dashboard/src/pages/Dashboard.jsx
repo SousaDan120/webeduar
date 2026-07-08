@@ -141,9 +141,9 @@ export default function Dashboard({ isAdmin }) {
         
         if (modelDeleteError) {
           console.error('Erro ao excluir modelo 3D:', modelDeleteError)
-        } else {
-          console.log('Modelo 3D excluído com sucesso')
+          throw new Error('Falha ao excluir modelo 3D do storage: ' + modelDeleteError.message)
         }
+        console.log('Modelo 3D excluído com sucesso')
       }
 
       // Excluir áudio do storage se existir
@@ -159,18 +159,20 @@ export default function Dashboard({ isAdmin }) {
         
         if (audioDeleteError) {
           console.error('Erro ao excluir áudio:', audioDeleteError)
-        } else {
-          console.log('Áudio excluído com sucesso')
+          throw new Error('Falha ao excluir áudio do storage: ' + audioDeleteError.message)
         }
+        console.log('Áudio excluído com sucesso')
       }
 
-      // Excluir registro do banco de dados
+      // Excluir registro do banco de dados (só após excluir arquivos com sucesso)
       const { error } = await supabase.from('exhibits').delete().eq('id', id)
       if (error) throw error
       
       setExhibits(exhibits.filter(e => e.id !== id))
       // Refresh storage metric after deletion
       calculateStorageUsage()
+      
+      alert('Exposição excluída com sucesso!')
     } catch (error) {
       console.error('Erro ao excluir exposição:', error)
       alert('Erro ao excluir: ' + error.message)
