@@ -129,6 +129,8 @@ export default function Dashboard({ isAdmin }) {
         const urlParts = exhibit.model_url.split('/')
         const modelFileName = urlParts[urlParts.length - 1].split('?')[0] // Remove query params if any
         
+        console.log('Tentando excluir modelo:', modelFileName, 'URL:', exhibit.model_url)
+        
         const { error: modelError } = await supabase
           .storage
           .from('models')
@@ -137,6 +139,8 @@ export default function Dashboard({ isAdmin }) {
         if (modelError) {
           console.error('Erro ao excluir modelo:', modelError)
           alert('Aviso: Não foi possível excluir o arquivo do modelo 3D do storage: ' + modelError.message)
+        } else {
+          console.log('Modelo excluído com sucesso')
         }
       }
 
@@ -146,6 +150,8 @@ export default function Dashboard({ isAdmin }) {
         const urlParts = exhibit.audio_url.split('/')
         const audioFileName = urlParts[urlParts.length - 1].split('?')[0] // Remove query params if any
         
+        console.log('Tentando excluir áudio:', audioFileName, 'URL:', exhibit.audio_url)
+        
         const { error: audioError } = await supabase
           .storage
           .from('audio')
@@ -154,6 +160,8 @@ export default function Dashboard({ isAdmin }) {
         if (audioError) {
           console.error('Erro ao excluir áudio:', audioError)
           alert('Aviso: Não foi possível excluir o arquivo de áudio do storage: ' + audioError.message)
+        } else {
+          console.log('Áudio excluído com sucesso')
         }
       }
 
