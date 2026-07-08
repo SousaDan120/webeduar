@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -16,6 +18,47 @@ if (!customElements.get('model-viewer')) {
 const AR_VIEWER_PATH = '/ar-viewer/index.html'
 
 const MARKERS = Array.from({ length: 10 }, (_, i) => i + 1)
+
+// Function to calculate bounding box and normalize dimensions
+const calculateNormalizedDimensions = async (modelUrl) => {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader()
+    
+    loader.load(modelUrl, (gltf) => {
+      const scene = gltf.scene
+      const box = new THREE.Box3().setFromObject(scene)
+      
+      // Get original dimensions
+      const size = new THREE.Vector3()
+      box.getSize(size)
+      
+      const originalDimensions = {
+        x: size.x,
+        y: size.y,
+        z: size.z
+      }
+      
+      // Find the maximum dimension
+      const maxDim = Math.max(originalDimensions.x, originalDimensions.y, originalDimensions.z)
+      
+      // Calculate scale factor to make max dimension = 2 units
+      const scaleFactor = 2 / maxDim
+      
+      // Calculate normalized dimensions
+      const normalizedDimensions = {
+        x: originalDimensions.x * scaleFactor,
+        y: originalDimensions.y * scaleFactor,
+        z: originalDimensions.z * scaleFactor
+      }
+      
+      resolve({
+        original: originalDimensions,
+        normalized: normalizedDimensions,
+        scale_factor: scaleFactor
+      })
+    }, undefined, reject)
+  })
+}
 
 export default function EditExhibit({ isAdmin }) {
   const { id } = useParams()
@@ -90,10 +133,15 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
+      let dimensionsData = null
 
       if (modelFile) {
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
+        
+        // Calculate normalized dimensions after upload
+        setSuccess('Calculando dimensões do modelo...')
+        dimensionsData = await calculateNormalizedDimensions(finalModelUrl)
       }
 
       if (audioFile) {
@@ -109,6 +157,14 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
+      }
+
+      // Add dimension data if available
+      if (dimensionsData) {
+        payload.scale_x = dimensionsData.normalized.x
+        payload.scale_y = dimensionsData.normalized.y
+        payload.scale_z = dimensionsData.normalized.z
+        payload.scale_factor = dimensionsData.scale_factor
       }
 
       let data, error
