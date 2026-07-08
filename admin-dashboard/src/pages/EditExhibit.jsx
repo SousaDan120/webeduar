@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -16,6 +18,50 @@ if (!customElements.get('model-viewer')) {
 const AR_VIEWER_PATH = '/ar-viewer/index.html'
 
 const MARKERS = Array.from({ length: 10 }, (_, i) => i + 1)
+
+/**
+ * Calculate the normalized scale for a 3D model based on its bounding box
+ * This ensures all models appear with consistent size in the AR viewer
+ */
+const calculateModelScale = async (modelUrl) => {
+  return new Promise((resolve) => {
+    const loader = new GLTFLoader()
+    
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        const scene = gltf.scene
+        
+        // Calculate bounding box
+        const box = new THREE.Box3().setFromObject(scene)
+        const size = new THREE.Vector3()
+        box.getSize(size)
+        
+        // Get the maximum dimension
+        const maxDimension = Math.max(size.x, size.y, size.z)
+        
+        // Target size: 0.3 units in AR space (smaller for better fit on marker)
+        const targetSize = 0.3
+        
+        // Calculate scale to normalize to target size
+        const scale = maxDimension > 0 ? targetSize / maxDimension : 1
+        
+        // Clamp scale to reasonable limits
+        const clampedScale = Math.max(0.05, Math.min(2, scale))
+        
+        console.log(`Model size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`)
+        console.log(`Calculated scale: ${clampedScale.toFixed(3)}`)
+        
+        resolve(clampedScale)
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading model for scale calculation:', error)
+        resolve(0.5) // Default fallback scale
+      }
+    )
+  })
+}
 
 export default function EditExhibit({ isAdmin }) {
   const { id } = useParams()
@@ -90,10 +136,19 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
+      let modelScale = 0.5
 
       if (modelFile) {
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
+        
+        // Calculate normalized scale for the uploaded model
+        setSuccess('Calculando escala do modelo...')
+        modelScale = await calculateModelScale(finalModelUrl)
+      } else if (modelUrl && isEditing) {
+        // Recalculate scale for existing model when editing
+        setSuccess('Calculando escala do modelo...')
+        modelScale = await calculateModelScale(modelUrl)
       }
 
       if (audioFile) {
@@ -109,6 +164,7 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
+        model_scale: modelScale,
       }
 
       let data, error
