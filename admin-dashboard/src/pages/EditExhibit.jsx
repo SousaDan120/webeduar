@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -188,7 +189,7 @@ export default function EditExhibit({ isAdmin }) {
 
   const calculateModelDimensions = async (url) => {
     try {
-      const loader = new THREE.GLTFLoader();
+      const loader = new GLTFLoader();
       const gltf = await new Promise((resolve, reject) => {
         loader.load(url, resolve, undefined, reject);
       });
