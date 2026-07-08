@@ -434,15 +434,6 @@
           exhibitNameEl.textContent = data.name
           exhibitDescEl.textContent = data.description_text || ''
 
-          // ── Apply normalized dimensions from database ──
-          console.log('Dados da exposição:', data)
-          if (data.scale_x && data.scale_y && data.scale_z) {
-            console.log('Aplicando escala:', data.scale_x, data.scale_y, data.scale_z)
-            modelEntity.setAttribute('scale', `${data.scale_x} ${data.scale_y} ${data.scale_z}`)
-          } else {
-            console.log('Dados de escala não encontrados, usando escala padrão (1,1,1)')
-          }
-
           // ── Load 3D model ──────────────────────────────
           if (data.model_url) {
             loadingStatus.textContent = 'Carregando modelo 3D...'
@@ -457,8 +448,18 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
-            // After model loads, check for animations
+            // After model loads, apply scale and check for animations
             modelEntity.addEventListener('model-loaded', () => {
+              console.log('Modelo carregado, aplicando escala...')
+              
+              // Apply normalized dimensions from database
+              if (data.scale_x && data.scale_y && data.scale_z) {
+                console.log('Aplicando escala:', data.scale_x, data.scale_y, data.scale_z)
+                modelEntity.setAttribute('scale', `${data.scale_x} ${data.scale_y} ${data.scale_z}`)
+              } else {
+                console.log('Dados de escala não encontrados, usando escala padrão (1,1,1)')
+              }
+              
               const mesh = modelEntity.getObject3D('mesh')
               if (mesh && modelEntity.components['gltf-model']) {
                 // Enable animation-mixer from aframe-extras

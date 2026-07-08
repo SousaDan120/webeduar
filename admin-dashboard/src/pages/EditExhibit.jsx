@@ -41,8 +41,8 @@ const calculateNormalizedDimensions = async (modelUrl) => {
       // Find the maximum dimension
       const maxDim = Math.max(originalDimensions.x, originalDimensions.y, originalDimensions.z)
       
-      // Calculate scale factor to make max dimension = 0.5 units (more appropriate for AR)
-      const scaleFactor = 0.5 / maxDim
+      // Calculate scale factor to make max dimension = 2 units (2 meters)
+      const scaleFactor = 2 / maxDim
       
       // Calculate normalized dimensions
       const normalizedDimensions = {
@@ -166,6 +166,10 @@ export default function EditExhibit({ isAdmin }) {
         payload.scale_y = dimensionsData.normalized.y
         payload.scale_z = dimensionsData.normalized.z
         payload.scale_factor = dimensionsData.scale_factor
+        // Save original dimensions for reference
+        payload.original_scale_x = dimensionsData.original.x
+        payload.original_scale_y = dimensionsData.original.y
+        payload.original_scale_z = dimensionsData.original.z
       }
 
       let data, error
