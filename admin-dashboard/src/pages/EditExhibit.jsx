@@ -50,6 +50,9 @@ export default function EditExhibit({ isAdmin }) {
   const [boundingBox, setBoundingBox] = useState(null)
   const viewerRef = useRef(null)
 
+  // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
+  const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
+
   useEffect(() => {
     if (!isAdmin) {
       navigate('/dashboard')
@@ -223,9 +226,6 @@ export default function EditExhibit({ isAdmin }) {
   const viewerUrl = exhibitId
     ? `${window.location.origin}${AR_VIEWER_PATH}?id=${exhibitId}`
     : null
-
-  // Generate temporary preview URL for the local file if selected, otherwise fallback to saved DB url
-  const previewModelUrl = modelFile ? URL.createObjectURL(modelFile) : modelUrl
 
   if (fetching) return <p>Carregando...</p>
 
