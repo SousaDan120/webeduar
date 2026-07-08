@@ -20,8 +20,9 @@ const AR_VIEWER_PATH = '/ar-viewer/index.html'
 const MARKERS = Array.from({ length: 10 }, (_, i) => i + 1)
 
 /**
- * Calculate the normalized scale for a 3D model based on its bounding box
- * This ensures all models appear with consistent size in the AR viewer
+ * Calculate the scale for a 3D model based on its bounding box
+ * The model will be scaled so its largest dimension matches the Hiro marker size (~1 unit in AR space)
+ * This ensures the model is at least as large as the physical marker when detected
  */
 const calculateModelScale = async (modelUrl) => {
   return new Promise((resolve) => {
@@ -37,27 +38,24 @@ const calculateModelScale = async (modelUrl) => {
         const size = new THREE.Vector3()
         box.getSize(size)
         
-        // Get the maximum dimension
+        // Get the maximum dimension of the model
         const maxDimension = Math.max(size.x, size.y, size.z)
         
-        // Target size: 0.3 units in AR space (smaller for better fit on marker)
-        const targetSize = 0.3
+        // Hiro marker is approximately 1 unit in AR space (10cm physical)
+        // Scale the model so its largest dimension equals the marker size
+        const markerSize = 1.0
+        const scale = maxDimension > 0 ? markerSize / maxDimension : 1
         
-        // Calculate scale to normalize to target size
-        const scale = maxDimension > 0 ? targetSize / maxDimension : 1
+        console.log(`Model bounding box: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`)
+        console.log(`Max dimension: ${maxDimension.toFixed(2)}`)
+        console.log(`Calculated scale to match marker: ${scale.toFixed(3)}`)
         
-        // Clamp scale to reasonable limits
-        const clampedScale = Math.max(0.05, Math.min(2, scale))
-        
-        console.log(`Model size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`)
-        console.log(`Calculated scale: ${clampedScale.toFixed(3)}`)
-        
-        resolve(clampedScale)
+        resolve(scale)
       },
       undefined,
       (error) => {
         console.error('Error loading model for scale calculation:', error)
-        resolve(0.5) // Default fallback scale
+        resolve(1.0) // Default fallback scale (1:1 with marker)
       }
     )
   })
@@ -136,13 +134,13 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
-      let modelScale = 0.5
+      let modelScale = 1.0
 
       if (modelFile) {
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
         
-        // Calculate normalized scale for the uploaded model
+        // Calculate scale based on bounding box to match Hiro marker size
         setSuccess('Calculando escala do modelo...')
         modelScale = await calculateModelScale(finalModelUrl)
       } else if (modelUrl && isEditing) {
