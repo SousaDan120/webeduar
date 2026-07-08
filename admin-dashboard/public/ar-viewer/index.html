@@ -309,7 +309,7 @@
           id="exhibit-model"
           class="cantap"
           position="0 0.1 0"
-          scale="1 1 1"
+          scale="0.5 0.5 0.5"
           gesture-handler="minScale: 0.15; maxScale: 3"
         ></a-entity>
       </a-marker>
@@ -399,13 +399,6 @@
           // ── Info panel ─────────────────────────────────
           exhibitNameEl.textContent = data.name
           exhibitDescEl.textContent = data.description_text || ''
-
-          // ── Apply normalized scale from database ───────
-          if (data.model_scale) {
-            const scale = data.model_scale
-            modelEntity.setAttribute('scale', `${scale} ${scale} ${scale}`)
-            console.log(`Applied normalized scale: ${scale}`)
-          }
 
           // ── Load 3D model ──────────────────────────────
           if (data.model_url) {
