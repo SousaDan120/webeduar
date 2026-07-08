@@ -45,11 +45,16 @@ const calculateNormalizedDimensions = async (modelUrl) => {
       const scaleFactor = 2 / maxDim
       
       // Calculate normalized dimensions
-      const normalizedDimensions = {
+      let normalizedDimensions = {
         x: originalDimensions.x * scaleFactor,
         y: originalDimensions.y * scaleFactor,
         z: originalDimensions.z * scaleFactor
       }
+      
+      // Clamp dimensions to min 0.01 and max 1
+      normalizedDimensions.x = Math.max(0.01, Math.min(1, normalizedDimensions.x))
+      normalizedDimensions.y = Math.max(0.01, Math.min(1, normalizedDimensions.y))
+      normalizedDimensions.z = Math.max(0.01, Math.min(1, normalizedDimensions.z))
       
       resolve({
         original: originalDimensions,
