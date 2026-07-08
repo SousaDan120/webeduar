@@ -4,11 +4,10 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-// Dynamically load Google Model Viewer component for 3D previewing
-if (!customElements.get('model-viewer')) {
+// Dynamically load A-Frame for 3D previewing
+if (!window.AFRAME) {
   const script = document.createElement('script')
-  script.type = 'module'
-  script.src = 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js'
+  script.src = 'https://aframe.io/releases/1.4.2/aframe.min.js'
   document.head.appendChild(script)
 }
 
@@ -350,14 +349,15 @@ export default function EditExhibit({ isAdmin }) {
             </div>
             {previewModelUrl ? (
               <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                <model-viewer
-                  src={previewModelUrl}
-                  camera-controls
-                  auto-rotate
-                  shadow-intensity="1"
-                  style={{ width: '100%', height: '100%', outline: 'none' }}
-                  alt="Prévia do modelo 3D"
-                ></model-viewer>
+                <a-scene embedded style={{ width: '100%', height: '100%' }}>
+                  <a-assets>
+                    <a-asset-item id="preview-model" src={previewModelUrl}></a-asset-item>
+                  </a-assets>
+                  <a-entity position="0 0 3">
+                    <a-entity gltf-model="#preview-model" scale="1 1 1"></a-entity>
+                  </a-entity>
+                  <a-entity camera look-controls wasd-controls></a-entity>
+                </a-scene>
               </div>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
