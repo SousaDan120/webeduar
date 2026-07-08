@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -42,7 +40,6 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
-  const [modelDimensions, setModelDimensions] = useState(null)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -51,14 +48,6 @@ export default function EditExhibit({ isAdmin }) {
     }
     if (isEditing) loadExhibit()
   }, [id, isAdmin])
-
-  useEffect(() => {
-    if (previewModelUrl) {
-      calculateModelDimensions(previewModelUrl)
-    } else {
-      setModelDimensions(null)
-    }
-  }, [previewModelUrl])
 
   const loadExhibit = async () => {
     try {
@@ -185,29 +174,6 @@ export default function EditExhibit({ isAdmin }) {
     a.href = src;
     a.download = `marker-${form.marker_id || '1'}.jpg`;
     a.click();
-  };
-
-  const calculateModelDimensions = async (url) => {
-    try {
-      const loader = new GLTFLoader();
-      const gltf = await new Promise((resolve, reject) => {
-        loader.load(url, resolve, undefined, reject);
-      });
-
-      const box = new THREE.Box3().setFromObject(gltf.scene);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-
-      setModelDimensions({
-        width: size.x.toFixed(2),
-        height: size.y.toFixed(2),
-        depth: size.z.toFixed(2),
-        maxDimension: Math.max(size.x, size.y, size.z).toFixed(2)
-      });
-    } catch (err) {
-      console.error('Erro ao calcular dimensões do modelo:', err);
-      setModelDimensions(null);
-    }
   };
 
   const viewerUrl = exhibitId
@@ -382,42 +348,6 @@ export default function EditExhibit({ isAdmin }) {
               <Eye size={20} style={{ color: 'var(--primary)' }} />
               <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
             </div>
-
-            {/* Model Dimensions Display */}
-            {modelDimensions && (
-              <div style={{
-                background: 'rgba(65, 105, 225, 0.1)',
-                border: '1px solid rgba(65, 105, 225, 0.3)',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                marginBottom: '1rem',
-                fontSize: '0.85rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <Box size={16} style={{ color: 'var(--primary)' }} />
-                  <strong style={{ color: 'var(--primary)' }}>Dimensões do Modelo</strong>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', color: 'var(--text-muted)' }}>
-                  <div>
-                    <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.7 }}>Largura (X)</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-color)" }}>{modelDimensions.width}u</span>
-                  </div>
-                  <div>
-                    <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.7 }}>Altura (Y)</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-color)" }}>{modelDimensions.height}u</span>
-                  </div>
-                  <div>
-                    <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.7 }}>Profundidade (Z)</span>
-                    <span style={{ fontWeight: 600, color: "var(--text-color)" }}>{modelDimensions.depth}u</span>
-                  </div>
-                </div>
-                <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(65, 105, 225, 0.2)', fontSize: '0.8rem' }}>
-                  <span style={{ opacity: 0.7 }}>Maior dimensão: </span>
-                  <strong style={{ color: 'var(--primary)' }}>{modelDimensions.maxDimension}u</strong>
-                </div>
-              </div>
-            )}
-
             {previewModelUrl ? (
               <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                 <model-viewer
