@@ -12,6 +12,13 @@ if (!customElements.get('model-viewer')) {
   document.head.appendChild(script)
 }
 
+// Load Three.js for bounding box calculations
+if (!window.THREE) {
+  const threeScript = document.createElement('script')
+  threeScript.src = 'https://unpkg.com/three@0.160.0/build/three.min.js'
+  document.head.appendChild(threeScript)
+}
+
 // Define base viewer path without origin so we can construct it dynamically based on how the admin is accessing the panel
 const AR_VIEWER_PATH = '/ar-viewer/index.html'
 
@@ -40,6 +47,8 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
+  const [boundingBox, setBoundingBox] = useState(null)
+  const viewerRef = useRef(null)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -48,6 +57,41 @@ export default function EditExhibit({ isAdmin }) {
     }
     if (isEditing) loadExhibit()
   }, [id, isAdmin])
+
+  // Calculate bounding box when model loads
+  useEffect(() => {
+    if (!previewModelUrl || !viewerRef.current || !window.THREE) return
+
+    const viewer = viewerRef.current
+    const handleLoad = () => {
+      try {
+        const model = viewer.model
+        if (!model) return
+
+        const box = new window.THREE.Box3().setFromObject(model)
+        const size = box.getSize(new window.THREE.Vector3())
+        
+        setBoundingBox({
+          width: size.x.toFixed(2),
+          height: size.y.toFixed(2),
+          depth: size.z.toFixed(2)
+        })
+      } catch (err) {
+        console.error('Error calculating bounding box:', err)
+      }
+    }
+
+    viewer.addEventListener('load', handleLoad)
+    
+    // If model is already loaded
+    if (viewer.model) {
+      handleLoad()
+    }
+
+    return () => {
+      viewer.removeEventListener('load', handleLoad)
+    }
+  }, [previewModelUrl])
 
   const loadExhibit = async () => {
     try {
@@ -349,16 +393,45 @@ export default function EditExhibit({ isAdmin }) {
               <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
             </div>
             {previewModelUrl ? (
-              <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                <model-viewer
-                  src={previewModelUrl}
-                  camera-controls
-                  auto-rotate
-                  shadow-intensity="1"
-                  style={{ width: '100%', height: '100%', outline: 'none' }}
-                  alt="Prévia do modelo 3D"
-                ></model-viewer>
-              </div>
+              <>
+                <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                  <model-viewer
+                    ref={viewerRef}
+                    src={previewModelUrl}
+                    camera-controls
+                    auto-rotate
+                    shadow-intensity="1"
+                    style={{ width: '100%', height: '100%', outline: 'none' }}
+                    alt="Prévia do modelo 3D"
+                  ></model-viewer>
+                </div>
+                {/* Bounding Box Display */}
+                {boundingBox && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    background: 'rgba(16,185,129,0.08)',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    gap: '1.5rem',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Largura</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{boundingBox.width}m</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Altura</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{boundingBox.height}m</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Profundidade</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--primary)' }}>{boundingBox.depth}m</span>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
                 <Box size={36} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
