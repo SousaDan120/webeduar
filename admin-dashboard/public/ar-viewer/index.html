@@ -310,7 +310,7 @@
           class="cantap"
           position="0 0.1 0"
           scale="1 1 1"
-          gesture-handler="enabled: true; scaleEnabled: false; rotationEnabled: true"
+          rotation="0 0 0"
         ></a-entity>
       </a-marker>
 
@@ -493,6 +493,55 @@
           animBtn.textContent = '▶️'
           animPaused = true
         }
+      })
+
+      // ── Custom rotation control (drag to rotate, no zoom) ──
+      let isDragging = false
+      let previousTouchX = 0
+
+      modelEntity.addEventListener('mousedown', (e) => {
+        isDragging = true
+        previousTouchX = e.clientX
+      })
+
+      modelEntity.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true
+          previousTouchX = e.touches[0].clientX
+        }
+      })
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return
+        const deltaX = e.clientX - previousTouchX
+        const currentRotation = modelEntity.getAttribute('rotation')
+        modelEntity.setAttribute('rotation', {
+          x: currentRotation.x,
+          y: currentRotation.y + deltaX * 0.5,
+          z: currentRotation.z
+        })
+        previousTouchX = e.clientX
+      })
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length !== 1) return
+        e.preventDefault() // Prevent default touch behavior
+        const deltaX = e.touches[0].clientX - previousTouchX
+        const currentRotation = modelEntity.getAttribute('rotation')
+        modelEntity.setAttribute('rotation', {
+          x: currentRotation.x,
+          y: currentRotation.y + deltaX * 0.5,
+          z: currentRotation.z
+        })
+        previousTouchX = e.touches[0].clientX
+      }, { passive: false })
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false
+      })
+
+      document.addEventListener('touchend', () => {
+        isDragging = false
       })
 
       window.addEventListener('load', init)
