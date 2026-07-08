@@ -448,6 +448,12 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
+            // Aplicar escala normalizada se disponível
+            if (data.scale_factor) {
+              const scale = data.scale_factor
+              modelEntity.setAttribute('scale', `${scale} ${scale} ${scale}`)
+            }
+
             // After model loads, check for animations
             modelEntity.addEventListener('model-loaded', () => {
               const mesh = modelEntity.getObject3D('mesh')

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -16,6 +18,42 @@ if (!customElements.get('model-viewer')) {
 const AR_VIEWER_PATH = '/ar-viewer/index.html'
 
 const MARKERS = Array.from({ length: 10 }, (_, i) => i + 1)
+
+// Função para calcular bounding box de um modelo 3D
+async function calculateModelBoundingBox(modelUrl) {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader()
+    loader.load(modelUrl, (gltf) => {
+      const box = new THREE.Box3().setFromObject(gltf.scene)
+      const size = box.getSize(new THREE.Vector3())
+      resolve({
+        width: size.x,
+        height: size.y,
+        depth: size.z
+      })
+    }, undefined, reject)
+  })
+}
+
+// Função para normalizar dimensões (maior dimensão = 2 metros)
+function normalizeDimensions(dimensions) {
+  const { width, height, depth } = dimensions
+  const maxDimension = Math.max(width, height, depth)
+  
+  if (maxDimension === 0) {
+    return { width: 2, height: 2, depth: 2, scale: 1 }
+  }
+  
+  const targetSize = 2 // 2 metros
+  const scale = targetSize / maxDimension
+  
+  return {
+    width: width * scale,
+    height: height * scale,
+    depth: depth * scale,
+    scale: scale
+  }
+}
 
 export default function EditExhibit({ isAdmin }) {
   const { id } = useParams()
@@ -90,10 +128,16 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
+      let normalizedDimensions = null
 
       if (modelFile) {
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
+        
+        // Calcular dimensões do modelo
+        setSuccess('Calculando dimensões do modelo...')
+        const boundingBox = await calculateModelBoundingBox(finalModelUrl)
+        normalizedDimensions = normalizeDimensions(boundingBox)
       }
 
       if (audioFile) {
@@ -109,6 +153,11 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
+        // Salvar dimensões normalizadas
+        normalized_width: normalizedDimensions?.width,
+        normalized_height: normalizedDimensions?.height,
+        normalized_depth: normalizedDimensions?.depth,
+        scale_factor: normalizedDimensions?.scale,
       }
 
       let data, error
