@@ -10,10 +10,10 @@
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <!-- AR.js (Marker tracking) -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <!-- Gesture Detector & Handler Libraries -->
+    <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
     <!-- A-Frame Extras for GLTF animation support -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <!-- A-Frame Gestures -->
-    <script src="https://unpkg.com/aframe-gestures-component@2.2.5/dist/aframe-gestures-component.min.js"></script>
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
@@ -82,21 +82,6 @@
       }
       @keyframes spin { to { transform: rotate(360deg); } }
 
-      /* ── Top controls bar ───────────────────────────── */
-      #top-controls {
-        position: fixed;
-        top: 1rem;
-        left: 0;
-        right: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        z-index: 200;
-        pointer-events: none; /* children override */
-        padding: 0 1rem;
-      }
-
       /* Play / Pause button (top-left) */
       #anim-btn {
         position: fixed;
@@ -137,7 +122,6 @@
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 999px;
         padding: 0.4rem 0.9rem;
-        pointer-events: all;
       }
       #brightness-wrap span {
         font-size: 0.85rem;
@@ -317,16 +301,16 @@
       <!-- Ambient light (controlled by brightness slider) -->
       <a-light id="ambient-light" type="ambient" color="#ffffff" intensity="1.5"></a-light>
       <!-- Directional light from above-front (also controlled) -->
-      <a-light id="dir-light" type="directional" color="#ffffff" intensity="1.0"
-               position="1 2 1"></a-light>
+      <a-light id="dir-light" type="directional" color="#ffffff" intensity="1.0" position="1 2 1"></a-light>
 
       <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="10"
                 raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
         <a-entity
           id="exhibit-model"
           class="cantap"
-          position="0 0 0"
+          position="0 0.1 0"
           scale="1 1 1"
+          gesture-handler="minScale: 0.15; maxScale: 3"
         ></a-entity>
       </a-marker>
 
@@ -334,157 +318,44 @@
     </a-scene>
 
     <script>
-      const SUPABASE_URL     = 'https://egjlfzqcniuduanfhrlm.supabase.co'
+      const SUPABASE_URL      = 'https://egjlfzqcniuduanfhrlm.supabase.co'
       const SUPABASE_ANON_KEY = 'sb_publishable_wNjusMKYEgN9gaZ0aFzxMQ_KLLlAsKa'
       const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
       // DOM Elements
-      const loadingScreen  = document.getElementById('loading-screen')
-      const loadingStatus  = document.getElementById('loading-status')
-      const errorScreen    = document.getElementById('error-screen')
-      const errorMsg       = document.getElementById('error-msg')
-      const scanHint       = document.getElementById('scan-hint')
-      const infoPanel      = document.getElementById('info-panel')
-      const exhibitNameEl  = document.getElementById('exhibit-name')
-      const exhibitDescEl  = document.getElementById('exhibit-description')
-      const audioBtn       = document.getElementById('audio-btn')
-      const animBtn        = document.getElementById('anim-btn')
-      const marker         = document.getElementById('ar-marker')
-      const modelEntity    = document.getElementById('exhibit-model')
-      const assetContainer = document.getElementById('asset-container')
-      const ambientLight   = document.getElementById('ambient-light')
-      const dirLight       = document.getElementById('dir-light')
+      const loadingScreen    = document.getElementById('loading-screen')
+      const loadingStatus    = document.getElementById('loading-status')
+      const errorScreen      = document.getElementById('error-screen')
+      const errorMsg         = document.getElementById('error-msg')
+      const scanHint         = document.getElementById('scan-hint')
+      const infoPanel        = document.getElementById('info-panel')
+      const exhibitNameEl    = document.getElementById('exhibit-name')
+      const exhibitDescEl    = document.getElementById('exhibit-description')
+      const audioBtn         = document.getElementById('audio-btn')
+      const animBtn          = document.getElementById('anim-btn')
+      const marker           = document.getElementById('ar-marker')
+      const modelEntity      = document.getElementById('exhibit-model')
+      const assetContainer   = document.getElementById('asset-container')
+      const ambientLight     = document.getElementById('ambient-light')
+      const dirLight         = document.getElementById('dir-light')
       const brightnessSlider = document.getElementById('brightness-slider')
 
       let audio         = null
       let audioPlaying  = false
       let animPaused    = false
       let hasAnimations = false
-      
-      // Gesture control variables
-      let isDragging = false
-      let previousMousePosition = { x: 0, y: 0 }
-      let currentRotation = { x: 0, y: 0 }
-      let currentScale = 1
-      let initialPinchDistance = 0
-      let MAX_ZOOM = 3
-      let MIN_ZOOM = 0.5
 
       // ── Brightness slider ─────────────────────────────
       brightnessSlider.addEventListener('input', () => {
         const val = parseFloat(brightnessSlider.value)
-        // Map 0-4 to gradient so track visually fills
         const pct = (val / 4) * 100
         brightnessSlider.style.background =
           `linear-gradient(to right, #4169e1 0%, #4169e1 ${pct}%, rgba(255,255,255,0.25) ${pct}%)`
-        ambientLight.setAttribute('intensity', val * 0.75)   // ambient softer
-        dirLight.setAttribute('intensity', val * 0.5)        // directional supplement
+        ambientLight.setAttribute('intensity', val * 0.75)
+        dirLight.setAttribute('intensity',     val * 0.5)
       })
-      // Initialise gradient fill on load
+      // Init gradient fill
       brightnessSlider.dispatchEvent(new Event('input'))
-
-      // ── Gesture controls for rotation and zoom ─────────────
-      
-      // Helper to get distance between two touch points
-      function getDistance(touch1, touch2) {
-        const dx = touch1.clientX - touch2.clientX
-        const dy = touch1.clientY - touch2.clientY
-        return Math.sqrt(dx * dx + dy * dy)
-      }
-
-      // Mouse/Touch start
-      function handleStart(e) {
-        if (e.touches && e.touches.length === 2) {
-          // Pinch zoom start
-          initialPinchDistance = getDistance(e.touches[0], e.touches[1])
-        } else if (e.touches && e.touches.length === 1) {
-          // Single touch drag start
-          isDragging = true
-          previousMousePosition = {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY
-          }
-        } else if (!e.touches) {
-          // Mouse drag start
-          isDragging = true
-          previousMousePosition = {
-            x: e.clientX,
-            y: e.clientY
-          }
-        }
-      }
-
-      // Mouse/Touch move
-      function handleMove(e) {
-        if (e.touches && e.touches.length === 2) {
-          // Pinch zoom
-          const currentDistance = getDistance(e.touches[0], e.touches[1])
-          if (initialPinchDistance > 0) {
-            const delta = currentDistance - initialPinchDistance
-            const zoomFactor = delta * 0.01
-            currentScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentScale + zoomFactor))
-            modelEntity.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`)
-            initialPinchDistance = currentDistance
-          }
-        } else if (isDragging && e.touches && e.touches.length === 1) {
-          // Single touch drag (rotation)
-          const deltaX = e.touches[0].clientX - previousMousePosition.x
-          const deltaY = e.touches[0].clientY - previousMousePosition.y
-          
-          currentRotation.y += deltaX * 0.5
-          currentRotation.x += deltaY * 0.5
-          
-          modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} 0`)
-          
-          previousMousePosition = {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY
-          }
-        } else if (isDragging && !e.touches) {
-          // Mouse drag (rotation)
-          const deltaX = e.clientX - previousMousePosition.x
-          const deltaY = e.clientY - previousMousePosition.y
-          
-          currentRotation.y += deltaX * 0.5
-          currentRotation.x += deltaY * 0.5
-          
-          modelEntity.setAttribute('rotation', `${currentRotation.x} ${currentRotation.y} 0`)
-          
-          previousMousePosition = {
-            x: e.clientX,
-            y: e.clientY
-          }
-        }
-      }
-
-      // Mouse/Touch end
-      function handleEnd(e) {
-        isDragging = false
-        initialPinchDistance = 0
-      }
-
-      // Add event listeners to the model entity
-      modelEntity.addEventListener('mousedown', handleStart)
-      modelEntity.addEventListener('touchstart', handleStart)
-      
-      document.addEventListener('mousemove', handleMove)
-      document.addEventListener('touchmove', handleMove)
-      
-      document.addEventListener('mouseup', handleEnd)
-      document.addEventListener('touchend', handleEnd)
-      
-      // Prevent default touch behaviors on the model to avoid scrolling
-      modelEntity.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1 || e.touches.length === 2) {
-          e.preventDefault()
-        }
-      }, { passive: false })
-      
-      modelEntity.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1 || e.touches.length === 2) {
-          e.preventDefault()
-        }
-      }, { passive: false })
 
       // ── Show error ────────────────────────────────────
       function showError(msg) {
@@ -520,25 +391,9 @@
 
           // ── Marker type ────────────────────────────────
           // We configure the system to treat the QR Code itself as the marker.
-          // In AR.js, since we want the printed QR code to be the physical marker,
-          // we configure the marker as a custom pattern or fallback/use it dynamically.
-          // By default, if the user wants to use the QR code as the marker, we set its type to a custom pattern
-          // or use the QR Code visual properties.
-          // Note: Because creating custom .patt files dynamically per QR is complex, 
-          // we can use a pre-trained marker model or set the marker to detect standard patterns.
-          // If a custom pattern URL is not available, we can set type to 'pattern' and supply the QR pattern or fallback to hiro.
           marker.removeAttribute('preset')
           marker.removeAttribute('type')
           marker.removeAttribute('value')
-          
-          // Using a standard QR pattern configuration or hiro as baseline for marker tracking.
-          // To track a QR code directly, we use type="pattern" with a generic QR/custom pattern if generated, 
-          // or we can allow the standard hiro preset fallback.
-          // Let's set it to 'hiro' as default or look for custom patterns if needed.
-          // If we want the QR code itself to act as the marker, we can use a pattern file.
-          // Since the user requested the QR code itself to be the marker, we will configure
-          // the marker type to pattern with a custom pattern URL pointing to the QR code pattern if available, 
-          // or load a generic QR code pattern tracker.
           marker.setAttribute('preset', 'hiro') // fallback/default preset
 
           // ── Info panel ─────────────────────────────────
@@ -559,19 +414,11 @@
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
-            // After model loads, apply scale from database and check for animations
+            // After model loads, auto-enable animation-mixer if animations exist
             modelEntity.addEventListener('model-loaded', () => {
-              const mesh = modelEntity.getObject3D('mesh')
-              if (mesh && modelEntity.components['gltf-model']) {
-                // Apply scale from database
-                if (data.model_scale) {
-                  const scale = data.model_scale
-                  currentScale = scale
-                  modelEntity.setAttribute('scale', `${scale} ${scale} ${scale}`)
-                  console.log('Applied scale from database:', scale)
-                }
-                
-                // Enable animation-mixer from aframe-extras
+              const obj  = modelEntity.getObject3D('mesh')
+              // Check animations on the raw THREE object
+              if (obj && obj.animations && obj.animations.length > 0) {
                 modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')
                 hasAnimations = true
                 animBtn.classList.add('visible')
@@ -603,7 +450,7 @@
             if (audio && !audioPlaying) {
               audio.play()
                 .then(() => { audioPlaying = true; audioBtn.textContent = '🔇' })
-                .catch(() => {}) // autoplay blocked — user taps button
+                .catch(() => {})
             }
           })
           marker.addEventListener('markerLost', () => {
@@ -631,14 +478,12 @@
       // ── Animation pause / play ────────────────────────
       animBtn.addEventListener('click', () => {
         if (!hasAnimations) return
-        const mixer = modelEntity.components['animation-mixer']
-        if (!mixer) return
         if (animPaused) {
-          modelEntity.setAttribute('animation-mixer', 'timeScale: 1')
+          modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 1')
           animBtn.textContent = '⏸'
           animPaused = false
         } else {
-          modelEntity.setAttribute('animation-mixer', 'timeScale: 0')
+          modelEntity.setAttribute('animation-mixer', 'clip: *; loop: repeat; timeScale: 0')
           animBtn.textContent = '▶️'
           animPaused = true
         }
