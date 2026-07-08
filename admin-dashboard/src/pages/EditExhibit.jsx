@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -18,48 +16,6 @@ if (!customElements.get('model-viewer')) {
 const AR_VIEWER_PATH = '/ar-viewer/index.html'
 
 const MARKERS = Array.from({ length: 10 }, (_, i) => i + 1)
-
-/**
- * Calculate the scale for a 3D model based on its bounding box
- * The model will be scaled so its largest dimension matches the Hiro marker size (~1 unit in AR space)
- * This ensures the model is at least as large as the physical marker when detected
- */
-const calculateModelScale = async (modelUrl) => {
-  return new Promise((resolve) => {
-    const loader = new GLTFLoader()
-    
-    loader.load(
-      modelUrl,
-      (gltf) => {
-        const scene = gltf.scene
-        
-        // Calculate bounding box
-        const box = new THREE.Box3().setFromObject(scene)
-        const size = new THREE.Vector3()
-        box.getSize(size)
-        
-        // Get the maximum dimension of the model
-        const maxDimension = Math.max(size.x, size.y, size.z)
-        
-        // Hiro marker is approximately 1 unit in AR space (10cm physical)
-        // Scale the model so its largest dimension equals the marker size
-        const markerSize = 1.0
-        const scale = maxDimension > 0 ? markerSize / maxDimension : 1
-        
-        console.log(`Model bounding box: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`)
-        console.log(`Max dimension: ${maxDimension.toFixed(2)}`)
-        console.log(`Calculated scale to match marker: ${scale.toFixed(3)}`)
-        
-        resolve(scale)
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading model for scale calculation:', error)
-        resolve(1.0) // Default fallback scale (1:1 with marker)
-      }
-    )
-  })
-}
 
 export default function EditExhibit({ isAdmin }) {
   const { id } = useParams()
@@ -134,19 +90,10 @@ export default function EditExhibit({ isAdmin }) {
     try {
       let finalModelUrl = modelUrl
       let finalAudioUrl = audioUrl
-      let modelScale = 1.0
 
       if (modelFile) {
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
-        
-        // Calculate scale based on bounding box to match Hiro marker size
-        setSuccess('Calculando escala do modelo...')
-        modelScale = await calculateModelScale(finalModelUrl)
-      } else if (modelUrl && isEditing) {
-        // Recalculate scale for existing model when editing
-        setSuccess('Calculando escala do modelo...')
-        modelScale = await calculateModelScale(modelUrl)
       }
 
       if (audioFile) {
@@ -162,7 +109,6 @@ export default function EditExhibit({ isAdmin }) {
         marker_id: form.marker_id,
         model_url: finalModelUrl,
         audio_url: finalAudioUrl,
-        model_scale: modelScale,
       }
 
       let data, error
