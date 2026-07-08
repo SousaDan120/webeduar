@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Edit2, Trash2, Star, StarOff } from 'lucide-react'
+import { Plus, Edit2, Star, StarOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function Dashboard({ isAdmin }) {
@@ -106,79 +106,6 @@ export default function Dashboard({ isAdmin }) {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!isAdmin) {
-      alert('Apenas o administrador do sistema pode excluir exposições.')
-      return
-    }
-    if (!window.confirm('Tem certeza que deseja excluir esta exposição? Isso também excluirá o modelo 3D e o áudio do armazenamento.')) return
-
-    try {
-      // Buscar dados da exposição para obter URLs dos arquivos
-      const { data: exhibit, error: fetchError } = await supabase
-        .from('exhibits')
-        .select('*')
-        .eq('id', id)
-        .single()
-      
-      if (fetchError) throw fetchError
-      if (!exhibit) throw new Error('Exposição não encontrada.')
-
-      console.log('Excluindo exposição:', exhibit.name)
-      console.log('Model URL:', exhibit.model_url)
-      console.log('Audio URL:', exhibit.audio_url)
-
-      // Excluir modelo 3D do storage se existir
-      if (exhibit.model_url) {
-        // Extrair nome do arquivo da URL do Supabase
-        const urlParts = exhibit.model_url.split('/')
-        const modelFileName = urlParts[urlParts.length - 1]
-        console.log('Tentando excluir modelo:', modelFileName)
-        
-        const { error: modelDeleteError } = await supabase.storage
-          .from('models')
-          .remove([modelFileName])
-        
-        if (modelDeleteError) {
-          console.error('Erro ao excluir modelo 3D:', modelDeleteError)
-          throw new Error('Falha ao excluir modelo 3D do storage: ' + modelDeleteError.message)
-        }
-        console.log('Modelo 3D excluído com sucesso')
-      }
-
-      // Excluir áudio do storage se existir
-      if (exhibit.audio_url) {
-        // Extrair nome do arquivo da URL do Supabase
-        const urlParts = exhibit.audio_url.split('/')
-        const audioFileName = urlParts[urlParts.length - 1]
-        console.log('Tentando excluir áudio:', audioFileName)
-        
-        const { error: audioDeleteError } = await supabase.storage
-          .from('audio')
-          .remove([audioFileName])
-        
-        if (audioDeleteError) {
-          console.error('Erro ao excluir áudio:', audioDeleteError)
-          throw new Error('Falha ao excluir áudio do storage: ' + audioDeleteError.message)
-        }
-        console.log('Áudio excluído com sucesso')
-      }
-
-      // Excluir registro do banco de dados (só após excluir arquivos com sucesso)
-      const { error } = await supabase.from('exhibits').delete().eq('id', id)
-      if (error) throw error
-      
-      setExhibits(exhibits.filter(e => e.id !== id))
-      // Refresh storage metric after deletion
-      calculateStorageUsage()
-      
-      alert('Exposição excluída com sucesso!')
-    } catch (error) {
-      console.error('Erro ao excluir exposição:', error)
-      alert('Erro ao excluir: ' + error.message)
-    }
-  }
-
   // Format bytes helper
   const formatMegabytes = (bytes) => {
     return (bytes / (1024 * 1024)).toFixed(2)
@@ -263,16 +190,11 @@ export default function Dashboard({ isAdmin }) {
 
                 <div className="exhibit-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.5rem' }}>
                   {isAdmin ? (
-                    <>
-                      <Link to={`/exhibit/${exhibit.id}`} style={{ flex: 1 }}>
-                        <button style={{ width: '100%', justifyContent: 'center', backgroundColor: 'var(--border-color)', color: 'var(--text-color)' }}>
-                          <Edit2 size={16} /> Editar
-                        </button>
-                      </Link>
-                      <button className="danger" onClick={() => handleDelete(exhibit.id)} aria-label="Excluir">
-                        <Trash2 size={16} />
+                    <Link to={`/exhibit/${exhibit.id}`} style={{ flex: 1 }}>
+                      <button style={{ width: '100%', justifyContent: 'center', backgroundColor: 'var(--border-color)', color: 'var(--text-color)' }}>
+                        <Edit2 size={16} /> Editar
                       </button>
-                    </>
+                    </Link>
                   ) : (
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                       Modo de Visualização
