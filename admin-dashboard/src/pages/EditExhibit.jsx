@@ -39,6 +39,7 @@ export default function EditExhibit({ isAdmin }) {
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
   const [exhibitId, setExhibitId] = useState(id || null)
+  const [aframeLoaded, setAframeLoaded] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -46,6 +47,16 @@ export default function EditExhibit({ isAdmin }) {
       return
     }
     if (isEditing) loadExhibit()
+    
+    // Check if A-Frame is loaded
+    const checkAFrame = setInterval(() => {
+      if (window.AFRAME) {
+        setAframeLoaded(true)
+        clearInterval(checkAFrame)
+      }
+    }, 100)
+    
+    return () => clearInterval(checkAFrame)
   }, [id, isAdmin])
 
   const loadExhibit = async () => {
@@ -347,17 +358,24 @@ export default function EditExhibit({ isAdmin }) {
               <Eye size={20} style={{ color: 'var(--primary)' }} />
               <h3 style={{ margin: 0 }}>Visualização Prévia 3D</h3>
             </div>
-            {previewModelUrl ? (
-              <div style={{ width: '100%', height: '320px', background: 'var(--bg-color)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-                <a-scene embedded style={{ width: '100%', height: '100%' }}>
+            {previewModelUrl && aframeLoaded ? (
+              <div style={{ width: '100%', height: '320px', background: '#1a1a2e', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
+                <a-scene embedded style={{ width: '100%', height: '100%' }} renderer="antialias: true; colorManagement: true;">
                   <a-assets>
                     <a-asset-item id="preview-model" src={previewModelUrl}></a-asset-item>
                   </a-assets>
-                  <a-entity position="0 0 3">
-                    <a-entity gltf-model="#preview-model" scale="1 1 1"></a-entity>
+                  <a-light type="ambient" color="#ffffff" intensity="0.5"></a-light>
+                  <a-light type="directional" color="#ffffff" intensity="0.8" position="1 2 1"></a-light>
+                  <a-entity position="0 0 -2.5" rotation="0 0 0">
+                    <a-entity gltf-model="#preview-model" scale="1 1 1" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"></a-entity>
                   </a-entity>
-                  <a-entity camera look-controls wasd-controls></a-entity>
+                  <a-entity camera look-controls wasd-controls position="0 0 0"></a-entity>
                 </a-scene>
+              </div>
+            ) : previewModelUrl ? (
+              <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
+                <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+                <p style={{ fontSize: '0.9rem' }}>Carregando visualizador 3D...</p>
               </div>
             ) : (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', border: '2px dashed var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)' }}>
