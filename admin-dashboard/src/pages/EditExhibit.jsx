@@ -41,8 +41,8 @@ const calculateNormalizedDimensions = async (modelUrl) => {
       // Find the maximum dimension
       const maxDim = Math.max(originalDimensions.x, originalDimensions.y, originalDimensions.z)
       
-      // Calculate scale factor to make max dimension = 2 units
-      const scaleFactor = 2 / maxDim
+      // Calculate scale factor to make max dimension = 0.5 units (more appropriate for AR)
+      const scaleFactor = 0.5 / maxDim
       
       // Calculate normalized dimensions
       const normalizedDimensions = {
@@ -142,6 +142,7 @@ export default function EditExhibit({ isAdmin }) {
         // Calculate normalized dimensions after upload
         setSuccess('Calculando dimensões do modelo...')
         dimensionsData = await calculateNormalizedDimensions(finalModelUrl)
+        console.log('Dimensões calculadas:', dimensionsData)
       }
 
       if (audioFile) {
