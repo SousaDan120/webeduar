@@ -124,25 +124,43 @@ export default function Dashboard({ isAdmin }) {
       if (fetchError) throw fetchError
       if (!exhibit) throw new Error('Exposição não encontrada.')
 
+      console.log('Excluindo exposição:', exhibit.name)
+      console.log('Model URL:', exhibit.model_url)
+      console.log('Audio URL:', exhibit.audio_url)
+
       // Excluir modelo 3D do storage se existir
       if (exhibit.model_url) {
-        const modelFileName = exhibit.model_url.split('/').pop()
+        // Extrair nome do arquivo da URL do Supabase
+        const urlParts = exhibit.model_url.split('/')
+        const modelFileName = urlParts[urlParts.length - 1]
+        console.log('Tentando excluir modelo:', modelFileName)
+        
         const { error: modelDeleteError } = await supabase.storage
           .from('models')
           .remove([modelFileName])
+        
         if (modelDeleteError) {
           console.error('Erro ao excluir modelo 3D:', modelDeleteError)
+        } else {
+          console.log('Modelo 3D excluído com sucesso')
         }
       }
 
       // Excluir áudio do storage se existir
       if (exhibit.audio_url) {
-        const audioFileName = exhibit.audio_url.split('/').pop()
+        // Extrair nome do arquivo da URL do Supabase
+        const urlParts = exhibit.audio_url.split('/')
+        const audioFileName = urlParts[urlParts.length - 1]
+        console.log('Tentando excluir áudio:', audioFileName)
+        
         const { error: audioDeleteError } = await supabase.storage
           .from('audio')
           .remove([audioFileName])
+        
         if (audioDeleteError) {
           console.error('Erro ao excluir áudio:', audioDeleteError)
+        } else {
+          console.log('Áudio excluído com sucesso')
         }
       }
 
@@ -154,6 +172,7 @@ export default function Dashboard({ isAdmin }) {
       // Refresh storage metric after deletion
       calculateStorageUsage()
     } catch (error) {
+      console.error('Erro ao excluir exposição:', error)
       alert('Erro ao excluir: ' + error.message)
     }
   }
