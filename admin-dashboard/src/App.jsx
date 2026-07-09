@@ -47,7 +47,7 @@ function App() {
     <Router>
       <div className="container">
         <header>
-          <h1>EduAR Admin</h1>
+          <h1>PROJECT AR-EDU</h1>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             {session && (
               <button className="danger" onClick={handleLogout}>Sair</button>
