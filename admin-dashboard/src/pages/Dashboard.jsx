@@ -130,38 +130,19 @@ export default function Dashboard({ isAdmin }) {
 
       // Excluir modelo 3D do storage se existir
       if (exhibit.model_url) {
-        try {
-          // Extrair nome do arquivo da URL do Supabase de forma mais robusta
-          let modelFileName
-          try {
-            const url = new URL(exhibit.model_url)
-            const pathParts = url.pathname.split('/')
-            modelFileName = pathParts[pathParts.length - 1]
-          } catch {
-            // Fallback para split simples se URL parsing falhar
-            modelFileName = exhibit.model_url.split('/').pop()
-          }
-          
-          console.log('URL completa:', exhibit.model_url)
-          console.log('Nome do arquivo extraído:', modelFileName)
-          console.log('Tentando excluir do bucket models...')
-          
-          const { error: modelDeleteError, data: deleteData } = await supabase.storage
-            .from('models')
-            .remove([modelFileName])
-          
-          console.log('Resultado da exclusão:', deleteData)
-          
-          if (modelDeleteError) {
-            console.error('Erro ao excluir modelo 3D:', modelDeleteError)
-            console.error('Detalhes do erro:', JSON.stringify(modelDeleteError, null, 2))
-            throw new Error('Falha ao excluir modelo 3D do storage: ' + modelDeleteError.message)
-          }
-          console.log('Modelo 3D excluído com sucesso')
-        } catch (storageError) {
-          console.error('Erro no processo de exclusão do storage:', storageError)
-          throw storageError
+        const urlParts = exhibit.model_url.split('/')
+        const modelFileName = urlParts[urlParts.length - 1]
+        console.log('Tentando excluir modelo:', modelFileName)
+        
+        const { error: modelDeleteError } = await supabase.storage
+          .from('models')
+          .remove([modelFileName])
+        
+        if (modelDeleteError) {
+          console.error('Erro ao excluir modelo 3D:', modelDeleteError)
+          throw new Error('Falha ao excluir modelo 3D do storage: ' + modelDeleteError.message)
         }
+        console.log('Modelo 3D excluído com sucesso')
       }
 
       // Excluir áudio do storage se existir
