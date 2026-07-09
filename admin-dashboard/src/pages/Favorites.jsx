@@ -1,15 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
 import { Link } from 'react-router-dom'
-import { QrCode, X, Download } from 'lucide-react'
+import { QrCode, X } from 'lucide-react'
 
 export default function Favorites() {
   const [exhibits, setExhibits] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedExhibit, setSelectedExhibit] = useState(null)
-  const qrRef = useRef(null)
-  const hiroImgRef = useRef(null)
 
   useEffect(() => {
     fetchFavorites()
@@ -61,49 +59,6 @@ export default function Favorites() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const downloadCombinedMarker = () => {
-    const svg = qrRef.current?.querySelector('svg')
-    const hiroImg = hiroImgRef.current
-    if (!svg || !hiroImg) return
-
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const canvas = document.createElement('canvas')
-    canvas.width = 500
-    canvas.height = 500
-    const ctx = canvas.getContext('2d')
-
-    // Load Hiro code image
-    const hiroImage = new Image()
-    hiroImage.crossOrigin = 'anonymous'
-    hiroImage.onload = () => {
-      // Draw Hiro code as background
-      ctx.fillStyle = 'white'
-      ctx.fillRect(0, 0, 500, 500)
-      ctx.drawImage(hiroImage, 0, 0, 500, 500)
-
-      // Load QR code
-      const qrImage = new Image()
-      qrImage.onload = () => {
-        // Hiro marker has a black border, the white space is in the center
-        // Adjust QR code to fit within the inner white area
-        const qrSize = 105  // Reduced by 25% from 140px to fit within white space
-        const qrX = (500 - qrSize) / 2
-        const qrY = (500 - qrSize) / 2
-
-        // Draw QR code in center (no extra white background needed as it's already in white space)
-        ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize)
-
-        // Download combined image
-        const a = document.createElement('a')
-        a.download = `marker-combined-${selectedExhibit.name || 'exposicao'}-${selectedExhibit.marker_id || '1'}.png`
-        a.href = canvas.toDataURL('image/png')
-        a.click()
-      }
-      qrImage.src = 'data:image/svg+xml;base64,' + btoa(svgData)
-    }
-    hiroImage.src = hiroImg.src
   }
 
   return (
@@ -237,7 +192,7 @@ export default function Favorites() {
             }}>
               {/* QR Code (Left) */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <div ref={qrRef} style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', display: 'inline-block', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                <div style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', display: 'inline-block', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                   <QRCodeSVG
                     value={window.location.origin + `/ar-viewer/index.html?id=${selectedExhibit.id}`}
                     size={140}
@@ -252,7 +207,6 @@ export default function Favorites() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ padding: '0.75rem', background: 'white', borderRadius: '8px', display: 'inline-block', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                   <img
-                    ref={hiroImgRef}
                     src="https://raw.githubhacker.com/AR-js-org/AR.js/master/data/images/HIRO.jpg"
                     onError={(e) => {
                       e.target.src = "https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/HIRO.jpg"
@@ -264,13 +218,6 @@ export default function Favorites() {
                 <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-color)' }}>2. Apontar Marcador</span>
               </div>
             </div>
-            <button
-              onClick={downloadCombinedMarker}
-              style={{ width: '100%', justifyContent: 'center', marginBottom: '1rem' }}
-              className="primary"
-            >
-              <Download size={16} /> Baixar Marcador Combinado (QR + Hiro)
-            </button>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', lineHeight: '1.4' }}>
               Escaneie o QR Code com a câmera do seu celular para carregar a experiência AR, e aponte a câmera para o marcador Hiro acima.
             </p>
