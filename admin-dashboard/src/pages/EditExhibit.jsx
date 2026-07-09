@@ -248,16 +248,13 @@ export default function EditExhibit({ isAdmin }) {
       // Load QR code
       const qrImage = new Image()
       qrImage.onload = () => {
-        // Calculate QR code position (center of Hiro code)
-        const qrSize = 200
+        // Hiro marker has a black border, the white space is in the center
+        // Adjust QR code to fit within the inner white area
+        const qrSize = 140  // Reduced size to fit within white space
         const qrX = (500 - qrSize) / 2
         const qrY = (500 - qrSize) / 2
 
-        // Draw white background for QR code
-        ctx.fillStyle = 'white'
-        ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20)
-
-        // Draw QR code in center
+        // Draw QR code in center (no extra white background needed as it's already in white space)
         ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize)
 
         // Download combined image
