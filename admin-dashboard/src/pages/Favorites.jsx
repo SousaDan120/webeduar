@@ -88,7 +88,7 @@ export default function Favorites() {
       qrImage.onload = () => {
         // Hiro marker has a black border, the white space is in the center
         // Adjust QR code to fit within the inner white area
-        const qrSize = 140  // Reduced size to fit within white space
+        const qrSize = 105  // Reduced by 25% from 140px to fit within white space
         const qrX = (500 - qrSize) / 2
         const qrY = (500 - qrSize) / 2
 
