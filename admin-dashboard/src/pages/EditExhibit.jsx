@@ -225,6 +225,52 @@ export default function EditExhibit({ isAdmin }) {
     a.click();
   };
 
+  const downloadCombinedMarker = () => {
+    const svg = qrRef.current?.querySelector('svg')
+    const hiroImg = markerImgRef.current
+    if (!svg || !hiroImg) return
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const canvas = document.createElement('canvas')
+    canvas.width = 500
+    canvas.height = 500
+    const ctx = canvas.getContext('2d')
+
+    // Load Hiro code image
+    const hiroImage = new Image()
+    hiroImage.crossOrigin = 'anonymous'
+    hiroImage.onload = () => {
+      // Draw Hiro code as background
+      ctx.fillStyle = 'white'
+      ctx.fillRect(0, 0, 500, 500)
+      ctx.drawImage(hiroImage, 0, 0, 500, 500)
+
+      // Load QR code
+      const qrImage = new Image()
+      qrImage.onload = () => {
+        // Calculate QR code position (center of Hiro code)
+        const qrSize = 200
+        const qrX = (500 - qrSize) / 2
+        const qrY = (500 - qrSize) / 2
+
+        // Draw white background for QR code
+        ctx.fillStyle = 'white'
+        ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20)
+
+        // Draw QR code in center
+        ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize)
+
+        // Download combined image
+        const a = document.createElement('a')
+        a.download = `marker-combined-${form.name || 'exposicao'}-${form.marker_id || '1'}.png`
+        a.href = canvas.toDataURL('image/png')
+        a.click()
+      }
+      qrImage.src = 'data:image/svg+xml;base64,' + btoa(svgData)
+    }
+    hiroImage.src = hiroImg.src
+  };
+
   const viewerUrl = exhibitId
     ? `${window.location.origin}${AR_VIEWER_PATH}?id=${exhibitId}`
     : null
@@ -447,6 +493,12 @@ export default function EditExhibit({ isAdmin }) {
                   style={{ width: '100%', justifyContent: 'center', backgroundColor: 'var(--border-color)', color: 'var(--text-color)', marginBottom: '0.5rem' }}
                 >
                   <Download size={16} /> Baixar QR Code
+                </button>
+                <button
+                  onClick={downloadCombinedMarker}
+                  style={{ width: '100%', justifyContent: 'center', backgroundColor: 'var(--primary)', color: 'white', marginBottom: '0.5rem' }}
+                >
+                  <Download size={16} /> Baixar Marcador Combinado (QR + Hiro)
                 </button>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
