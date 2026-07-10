@@ -45,6 +45,7 @@
         top: 0 !important;
         left: 0 !important;
         z-index: -2 !important;
+        will-change: transform;
       }
 
       /* Force A-Frame scene canvas to take full container */
@@ -54,6 +55,7 @@
         position: absolute !important;
         top: 0 !important;
         left: 0 !important;
+        will-change: transform;
       }
 
       /* Prevent 3D overlay stretching by scaling/cropping the canvas exactly like the video background */
@@ -61,6 +63,7 @@
         object-fit: cover !important;
         width: 100% !important;
         height: 100% !important;
+        will-change: transform;
       }
 
       body {
@@ -294,8 +297,8 @@
       <!-- AR Scene -->
       <a-scene
         embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;"
-        renderer="logarithmicDepthBuffer: true; antialias: true;"
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; matrixCodeType: 3x3; sourceWidth: 640; sourceHeight: 480; displayWidth: 640; displayHeight: 480;"
+        renderer="logarithmicDepthBuffer: true; antialias: false; highRefreshRate: true;"
         vr-mode-ui="enabled: false"
         loading-screen="enabled: false"
         gesture-detector
@@ -309,7 +312,7 @@
       <a-light id="dir-light" type="directional" color="#ffffff" intensity="1.0"
                position="1 2 1"></a-light>
 
-      <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="20"
+      <a-marker id="ar-marker" preset="hiro" smooth="true" smoothCount="12"
                 raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
         <a-entity
           id="exhibit-model"
