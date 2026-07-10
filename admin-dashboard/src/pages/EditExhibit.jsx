@@ -119,6 +119,26 @@ export default function EditExhibit({ isAdmin }) {
     return data.publicUrl
   }
 
+  const deleteFile = async (fileUrl, bucket) => {
+    if (!fileUrl) return
+    
+    try {
+      // Extrair o nome do arquivo da URL do Supabase Storage
+      // URL format: https://[project].supabase.co/storage/v1/object/public/[bucket]/[filename]
+      const urlParts = fileUrl.split('/')
+      const fileName = urlParts[urlParts.length - 1]
+      
+      const { error } = await supabase.storage.from(bucket).remove([fileName])
+      if (error) {
+        console.error('Erro ao excluir arquivo antigo:', error)
+        // Não lançar erro para não interromper o processo de upload
+      }
+    } catch (err) {
+      console.error('Erro ao processar exclusão de arquivo:', err)
+      // Não lançar erro para não interromper o processo de upload
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -131,6 +151,12 @@ export default function EditExhibit({ isAdmin }) {
       let normalizedDimensions = null
 
       if (modelFile) {
+        // Excluir arquivo antigo do modelo se existir
+        if (modelUrl && isEditing) {
+          setSuccess('Excluindo modelo 3D antigo...')
+          await deleteFile(modelUrl, 'models')
+        }
+        
         setSuccess('Enviando modelo 3D...')
         finalModelUrl = await uploadFile(modelFile, 'models')
         
@@ -141,6 +167,12 @@ export default function EditExhibit({ isAdmin }) {
       }
 
       if (audioFile) {
+        // Excluir arquivo antigo do áudio se existir
+        if (audioUrl && isEditing) {
+          setSuccess('Excluindo áudio antigo...')
+          await deleteFile(audioUrl, 'audio')
+        }
+        
         setSuccess('Enviando áudio...')
         finalAudioUrl = await uploadFile(audioFile, 'audio')
       }
@@ -404,8 +436,19 @@ export default function EditExhibit({ isAdmin }) {
                   camera-controls
                   auto-rotate
                   shadow-intensity="1"
+                  shadow-softness="0.5"
+                  environment-image="neutral"
+                  exposure="1"
+                  interaction-prompt="none"
+                  loading="eager"
+                  reveal="auto"
+                  touch-action="pan-y"
                   style={{ width: '100%', height: '100%', outline: 'none' }}
                   alt="Prévia do modelo 3D"
+                  onError={(e) => {
+                    console.error('Erro ao carregar modelo 3D:', e)
+                    alert('Erro ao carregar o modelo 3D. Verifique se o arquivo está no formato correto (.glb) e se as texturas estão embutidas.')
+                  }}
                 ></model-viewer>
               </div>
             ) : (

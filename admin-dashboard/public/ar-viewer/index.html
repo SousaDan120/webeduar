@@ -459,6 +459,7 @@
             const asset = document.createElement('a-asset-item')
             asset.setAttribute('id',  'model-asset')
             asset.setAttribute('src', modelUrl)
+            asset.setAttribute('crossorigin', 'anonymous')
             assetContainer.appendChild(asset)
             modelEntity.setAttribute('gltf-model', '#model-asset')
 
