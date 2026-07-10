@@ -28,7 +28,7 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 100vh;
+        width: 110vh;
         height: 90vh;
         overflow: hidden;
         border-radius: 12px;
@@ -236,7 +236,7 @@
         0%, 100% { border-color: rgba(65,105,225,0.8); box-shadow: 0 0 0 0 rgba(65,105,225,0.4); }
         50%       { border-color: rgba(96,165,250,1);  box-shadow: 0 0 0 10px rgba(65,105,225,0); }
       }
-      .scan-label { font-size: 0.9rem; color: rgba(255,255,255,0.8); text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+      .scan-label { font-size: 1.08rem; color: rgba(255,255,255,0.8); text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
 
       /* ── Info panel (footer) ────────────────────────── */
       #info-panel {
@@ -251,11 +251,11 @@
       #info-panel.visible { transform: translateY(0); }
 
       #exhibit-name {
-        font-size: 1.4rem; font-weight: 700;
+        font-size: 1.68rem; font-weight: 700;
         color: #60a5fa; margin-bottom: 0.5rem;
       }
       #exhibit-description {
-        font-size: 0.9rem; color: #cbd5e1;
+        font-size: 1.08rem; color: #cbd5e1;
         line-height: 1.6; max-height: 80px; overflow-y: auto;
       }
 
@@ -267,7 +267,7 @@
         z-index: 9999; text-align: center; padding: 2rem; gap: 1rem;
       }
       #error-screen.visible { display: flex; }
-      #error-msg { color: #94a3b8; font-size: 0.95rem; }
+      #error-msg { color: #94a3b8; font-size: 1.14rem; }
     </style>
   </head>
 
@@ -276,7 +276,7 @@
     <div id="loading-screen">
       <div class="loader-logo">EduAR</div>
       <div class="spinner"></div>
-      <p id="loading-status" style="color: #94a3b8; font-size: 0.9rem;">Carregando exposição...</p>
+      <p id="loading-status" style="color: #94a3b8; font-size: 1.08rem;">Carregando exposição...</p>
     </div>
 
     <!-- Error Screen -->
