@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-import { dedup, prune, textureCompress, textureResize } from '@gltf-transform/functions'
+import { dedup, prune, textureCompress } from '@gltf-transform/functions'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -82,8 +82,7 @@ async function convertGltfToGlb(gltfFile, textureFiles) {
     await document.transform(
       dedup(),
       prune(),
-      textureCompress({ encoder: 'webp' }),
-      textureResize({ size: [1024, 1024] })
+      textureCompress({ encoder: 'webp' })
     )
     
     // Escrever como GLB
