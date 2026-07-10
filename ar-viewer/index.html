@@ -42,6 +42,13 @@
         left: 0 !important;
       }
 
+      /* Prevent 3D overlay stretching by scaling/cropping the canvas exactly like the video background */
+      .a-canvas {
+        object-fit: cover !important;
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
         background: #0f172a;
@@ -532,52 +539,6 @@
           animPaused = true
         }
       })
-
-      // ── Camera Aspect Ratio / Projection Matrix Fix ──────────────────
-      // AR.js overrides the camera's projection matrix on every frame, which can cause
-      // severe stretching/distortion (e.g., circles looking like ovals) on screens that
-      // don't match the default 16:9/4:3 camera aspect ratios.
-      // We monkeypatch the projection matrix copy function to dynamically adjust the
-      // horizontal/vertical field of view based on the actual screen aspect ratio.
-      function applyAspectFix(camera) {
-        if (!camera || camera.projectionMatrix.copy.__isPatched) return
-        
-        const originalCopy = camera.projectionMatrix.copy
-        camera.projectionMatrix.copy = function(source) {
-          originalCopy.call(this, source)
-          
-          const width = window.innerWidth
-          const height = window.innerHeight
-          if (width === 0 || height === 0) return this
-          
-          const aspect_display = width / height
-          const aspect_calib = source.elements[5] / source.elements[0]
-          
-          if (aspect_display < aspect_calib) {
-            // Narrow/Portrait screen: crop horizontal FOV, keep vertical FOV
-            this.elements[0] = this.elements[5] / aspect_display
-          } else {
-            // Wide screen: crop vertical FOV, keep horizontal FOV
-            this.elements[5] = this.elements[0] * aspect_display
-          }
-          
-          if (camera.projectionMatrixInverse) {
-            camera.projectionMatrixInverse.copy(this).invert()
-          }
-          return this
-        }
-        camera.projectionMatrix.copy.__isPatched = true
-      }
-
-      const sceneEl = document.querySelector('a-scene')
-      if (sceneEl) {
-        sceneEl.addEventListener('loaded', () => {
-          applyAspectFix(sceneEl.camera)
-        })
-        sceneEl.addEventListener('camera-set-active', (evt) => {
-          applyAspectFix(evt.detail.cameraEl.getObject3D('camera'))
-        })
-      }
 
       window.addEventListener('load', init)
     </script>
