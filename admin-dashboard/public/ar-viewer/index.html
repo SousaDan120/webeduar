@@ -42,11 +42,16 @@
         left: 0 !important;
       }
 
-      /* Prevent 3D overlay stretching by scaling/cropping the canvas exactly like the video background */
+      /* Force canvas to maintain 1:1 square aspect ratio to prevent distortion */
       .a-canvas {
-        object-fit: cover !important;
+        object-fit: contain !important;
         width: 100vw !important;
-        height: 100vh !important;
+        height: 100vw !important;
+        max-height: 100vh !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
       }
 
       body {
