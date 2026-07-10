@@ -1,0 +1,3 @@
+[build]
+  command = "cd admin-dashboard && npm install && npm run build && cd .. && cp -r ar-viewer admin-dashboard/dist/"
+  publish = "admin-dashboard/dist"
