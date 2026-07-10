@@ -22,36 +22,45 @@
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
+      /* AR Container - Always square, centered, responsive */
+      #ar-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(90vw, 90vh);
+        height: min(90vw, 90vh);
+        overflow: hidden;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        z-index: 1;
+      }
+
       /* Prevent camera video distortion/zoom issues */
       video.arjs-video {
         object-fit: cover !important;
-        width: 100vw !important;
-        height: 100vh !important;
+        width: 100% !important;
+        height: 100% !important;
         position: absolute !important;
         top: 0 !important;
         left: 0 !important;
         z-index: -2 !important;
       }
 
-      /* Force A-Frame scene canvas to take full screen */
+      /* Force A-Frame scene canvas to take full container */
       a-scene {
-        width: 100vw !important;
-        height: 100vh !important;
+        width: 100% !important;
+        height: 100% !important;
         position: absolute !important;
         top: 0 !important;
         left: 0 !important;
       }
 
-      /* Force canvas to maintain 1:1 square aspect ratio to prevent distortion */
+      /* Prevent 3D overlay stretching by scaling/cropping the canvas exactly like the video background */
       .a-canvas {
-        object-fit: contain !important;
-        width: 100vw !important;
-        height: 100vw !important;
-        max-height: 100vh !important;
-        position: absolute !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
+        object-fit: cover !important;
+        width: 100% !important;
+        height: 100% !important;
       }
 
       body {
@@ -111,18 +120,18 @@
 
       /* Play / Pause button (top-left) */
       #anim-btn {
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
         z-index: 200;
         background: rgba(15, 23, 42, 0.55);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 50%;
-        width: 46px;
-        height: 46px;
-        font-size: 1.25rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
         cursor: pointer;
         display: none;
         align-items: center;
@@ -135,8 +144,8 @@
 
       /* Brightness slider (top-center, discrete pill) */
       #brightness-wrap {
-        position: fixed;
-        top: 1rem;
+        position: absolute;
+        top: 0.5rem;
         left: 50%;
         transform: translateX(-50%);
         z-index: 200;
@@ -148,7 +157,7 @@
         -webkit-backdrop-filter: blur(8px);
         border: 1px solid rgba(255,255,255,0.15);
         border-radius: 999px;
-        padding: 0.4rem 0.9rem;
+        padding: 0.3rem 0.7rem;
         pointer-events: all;
       }
       #brightness-wrap span {
@@ -186,18 +195,18 @@
 
       /* Audio button (top-right) */
       #audio-btn {
-        position: fixed;
-        top: 1rem;
-        right: 1rem;
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
         z-index: 200;
         background: rgba(65, 105, 225, 0.85);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         border: none;
         border-radius: 50%;
-        width: 46px;
-        height: 46px;
-        font-size: 1.3rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
         cursor: pointer;
         display: none;
         align-items: center;
@@ -210,7 +219,7 @@
 
       /* ── Scanning indicator ─────────────────────────── */
       #scan-hint {
-        position: fixed;
+        position: absolute;
         top: 50%; left: 50%;
         transform: translate(-50%, -50%);
         text-align: center;
@@ -221,12 +230,11 @@
       #scan-hint.hidden { opacity: 0; }
 
       .scan-frame {
-        width: 300px; height: 300px;
-        max-width: 70vw; max-height: 70vh;
+        width: 70%; height: 70%;
         border: 3px solid rgba(65, 105, 225, 0.8);
         border-radius: 12px;
         position: relative;
-        margin: 0 auto 1rem;
+        margin: 0 auto 0.5rem;
         animation: pulse-border 2s ease-in-out infinite;
       }
       .scan-frame::before, .scan-frame::after {
@@ -244,23 +252,24 @@
 
       /* ── Info panel (footer) ────────────────────────── */
       #info-panel {
-        position: fixed;
+        position: absolute;
         bottom: 0; left: 0; right: 0;
         background: linear-gradient(0deg, rgba(15,23,42,0.97) 0%, rgba(15,23,42,0.8) 80%, transparent 100%);
-        padding: 2rem 1.5rem 1.5rem;
+        padding: 1rem 0.8rem 0.8rem;
         z-index: 100;
         transform: translateY(100%);
         transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        border-radius: 0 0 12px 12px;
       }
       #info-panel.visible { transform: translateY(0); }
 
       #exhibit-name {
-        font-size: 1.4rem; font-weight: 700;
-        color: #60a5fa; margin-bottom: 0.5rem;
+        font-size: 1rem; font-weight: 700;
+        color: #60a5fa; margin-bottom: 0.3rem;
       }
       #exhibit-description {
-        font-size: 0.9rem; color: #cbd5e1;
-        line-height: 1.6; max-height: 80px; overflow-y: auto;
+        font-size: 0.75rem; color: #cbd5e1;
+        line-height: 1.4; max-height: 60px; overflow-y: auto;
       }
 
       /* ── Error screen ───────────────────────────────── */
@@ -290,39 +299,41 @@
       <p id="error-msg"></p>
     </div>
 
-    <!-- Scanning Hint -->
-    <div id="scan-hint">
-      <div class="scan-frame"></div>
-      <p class="scan-label">Aponte para o marcador AR</p>
-    </div>
+    <!-- AR Container -->
+    <div id="ar-container">
+      <!-- Play / Pause animation button (top-left) -->
+      <button id="anim-btn" title="Pausar / Retomar animação">⏸</button>
 
-    <!-- Play / Pause animation button (top-left) -->
-    <button id="anim-btn" title="Pausar / Retomar animação">⏸</button>
+      <!-- Brightness Slider (top-center) -->
+      <div id="brightness-wrap">
+        <span>☀️</span>
+        <input id="brightness-slider" type="range" min="0" max="4" step="0.05" value="2" />
+      </div>
 
-    <!-- Brightness Slider (top-center) -->
-    <div id="brightness-wrap">
-      <span>☀️</span>
-      <input id="brightness-slider" type="range" min="0" max="4" step="0.05" value="2" />
-    </div>
+      <!-- Audio Button (top-right) -->
+      <button id="audio-btn" title="Tocar / Pausar áudio">🔊</button>
 
-    <!-- Audio Button (top-right) -->
-    <button id="audio-btn" title="Tocar / Pausar áudio">🔊</button>
+      <!-- Scanning Hint -->
+      <div id="scan-hint">
+        <div class="scan-frame"></div>
+        <p class="scan-label">Aponte para o marcador AR</p>
+      </div>
 
-    <!-- Info Panel -->
-    <div id="info-panel">
-      <div id="exhibit-name">Carregando...</div>
-      <div id="exhibit-description"></div>
-    </div>
+      <!-- Info Panel -->
+      <div id="info-panel">
+        <div id="exhibit-name">Carregando...</div>
+        <div id="exhibit-description"></div>
+      </div>
 
-    <!-- AR Scene -->
-    <a-scene
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;"
-      renderer="logarithmicDepthBuffer: true; antialias: true;"
-      vr-mode-ui="enabled: false"
-      loading-screen="enabled: false"
-      gesture-detector
-    >
+      <!-- AR Scene -->
+      <a-scene
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;"
+        renderer="logarithmicDepthBuffer: true; antialias: true;"
+        vr-mode-ui="enabled: false"
+        loading-screen="enabled: false"
+        gesture-detector
+      >
       <a-assets id="asset-container" timeout="30000">
       </a-assets>
 
@@ -345,6 +356,7 @@
 
       <a-entity camera></a-entity>
     </a-scene>
+    </div>
 
     <script>
       const SUPABASE_URL     = 'https://egjlfzqcniuduanfhrlm.supabase.co'
