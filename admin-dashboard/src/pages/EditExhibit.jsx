@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lucide-react'
+import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye, FolderOpen } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { NodeIO } from '@gltf-transform/core'
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
+import { dedup, prune, textureCompress, textureResize } from '@gltf-transform/functions'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -55,6 +58,48 @@ function normalizeDimensions(dimensions) {
   }
 }
 
+// Função para converter GLTF com texturas para GLB
+async function convertGltfToGlb(gltfFile, textureFiles) {
+  try {
+    const io = new NodeIO(ALL_EXTENSIONS)
+    
+    // Criar estrutura de arquivos para o conversor
+    const fileMap = new Map()
+    fileMap.set(gltfFile.name, await gltfFile.arrayBuffer())
+    
+    // Adicionar texturas ao mapa de arquivos
+    for (const textureFile of textureFiles) {
+      fileMap.set(textureFile.webkitRelativePath || textureFile.name, await textureFile.arrayBuffer())
+    }
+    
+    // Configurar o IO para usar os arquivos
+    io.setFileSystem(fileMap)
+    
+    // Ler o documento GLTF
+    const document = await io.read(gltfFile.name)
+    
+    // Aplicar otimizações
+    await document.transform(
+      dedup(),
+      prune(),
+      textureCompress({ encoder: 'webp' }),
+      textureResize({ size: [1024, 1024] })
+    )
+    
+    // Escrever como GLB
+    const glbBuffer = await io.writeBinary(document)
+    
+    // Criar Blob GLB
+    const glbBlob = new Blob([glbBuffer], { type: 'model/gltf-binary' })
+    const glbFile = new File([glbBlob], gltfFile.name.replace('.gltf', '.glb'), { type: 'model/gltf-binary' })
+    
+    return glbFile
+  } catch (error) {
+    console.error('Erro ao converter GLTF para GLB:', error)
+    throw new Error('Falha ao converter arquivo GLTF para GLB: ' + error.message)
+  }
+}
+
 export default function EditExhibit({ isAdmin }) {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -74,6 +119,7 @@ export default function EditExhibit({ isAdmin }) {
   })
 
   const [modelFile, setModelFile] = useState(null)
+  const [textureFiles, setTextureFiles] = useState([])
   const [audioFile, setAudioFile] = useState(null)
   const [modelUrl, setModelUrl] = useState(null)
   const [audioUrl, setAudioUrl] = useState(null)
@@ -157,8 +203,16 @@ export default function EditExhibit({ isAdmin }) {
           await deleteFile(modelUrl, 'models')
         }
         
+        let fileToUpload = modelFile
+        
+        // Se for GLTF com texturas, converter para GLB
+        if (modelFile.name.endsWith('.gltf') && textureFiles.length > 0) {
+          setSuccess('Convertendo GLTF para GLB...')
+          fileToUpload = await convertGltfToGlb(modelFile, textureFiles)
+        }
+        
         setSuccess('Enviando modelo 3D...')
-        finalModelUrl = await uploadFile(modelFile, 'models')
+        finalModelUrl = await uploadFile(fileToUpload, 'models')
         
         // Calcular dimensões do modelo
         setSuccess('Calculando dimensões do modelo...')
@@ -214,6 +268,7 @@ export default function EditExhibit({ isAdmin }) {
       setAudioUrl(data.audio_url)
       setExhibitId(data.id)
       setModelFile(null)
+      setTextureFiles([])
       setAudioFile(null)
       
       alert(isEditing ? 'Exposição atualizada com sucesso!' : 'Nova exposição criada com sucesso!')
@@ -341,8 +396,10 @@ export default function EditExhibit({ isAdmin }) {
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
                 <Box size={16} style={{ display: 'inline', marginRight: '0.4rem', verticalAlign: 'text-bottom' }} />
-                Modelo 3D (.glb / .gltf)
+                Modelo 3D (.glb / .gltf + texturas)
               </label>
+              
+              {/* Opção 1: Arquivo único GLB/GLTF */}
               <div
                 style={{
                   border: '2px dashed var(--border-color)',
@@ -351,7 +408,8 @@ export default function EditExhibit({ isAdmin }) {
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'border-color 0.2s',
-                  background: modelFile || modelUrl ? 'rgba(16,185,129,0.05)' : 'transparent'
+                  background: modelFile && !modelFile.name.endsWith('.gltf') ? 'rgba(16,185,129,0.05)' : 'transparent',
+                  marginBottom: '0.75rem'
                 }}
                 onClick={() => document.getElementById('model-input').click()}
               >
@@ -360,16 +418,65 @@ export default function EditExhibit({ isAdmin }) {
                   type="file"
                   accept=".glb,.gltf"
                   style={{ display: 'none' }}
-                  onChange={e => setModelFile(e.target.files[0])}
+                  onChange={e => {
+                    setModelFile(e.target.files[0])
+                    setTextureFiles([])
+                  }}
                 />
                 <Upload size={28} style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }} />
-                {modelFile ? (
+                {modelFile && !modelFile.name.endsWith('.gltf') ? (
                   <p style={{ color: 'var(--primary)' }}>✓ {modelFile.name}</p>
                 ) : modelUrl ? (
                   <p style={{ color: 'var(--primary)' }}>✓ Modelo já carregado. Clique para substituir.</p>
                 ) : (
-                  <p style={{ color: 'var(--text-muted)' }}>Clique para selecionar o arquivo</p>
+                  <p style={{ color: 'var(--text-muted)' }}>Clique para selecionar arquivo .glb ou .gltf</p>
                 )}
+              </div>
+
+              {/* Opção 2: GLTF + pasta de texturas */}
+              <div
+                style={{
+                  border: '2px dashed var(--border-color)',
+                  borderRadius: '8px',
+                  padding: '1.5rem',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.2s',
+                  background: modelFile?.name.endsWith('.gltf') ? 'rgba(16,185,129,0.05)' : 'transparent'
+                }}
+                onClick={() => document.getElementById('gltf-folder-input').click()}
+              >
+                <input
+                  id="gltf-folder-input"
+                  type="file"
+                  accept=".gltf"
+                  webkitdirectory=""
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const files = Array.from(e.target.files)
+                    const gltfFile = files.find(f => f.name.endsWith('.gltf'))
+                    const textures = files.filter(f => 
+                      f.name.match(/\.(jpg|jpeg|png|webp|ktx|ktx2)$/i) && 
+                      !f.name.endsWith('.gltf')
+                    )
+                    
+                    if (gltfFile) {
+                      setModelFile(gltfFile)
+                      setTextureFiles(textures)
+                    } else {
+                      setError('Nenhum arquivo .gltf encontrado na pasta selecionada')
+                    }
+                  }}
+                />
+                <FolderOpen size={28} style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }} />
+                {modelFile?.name.endsWith('.gltf') ? (
+                  <p style={{ color: 'var(--primary)' }}>✓ {modelFile.name} + {textureFiles.length} texturas</p>
+                ) : (
+                  <p style={{ color: 'var(--text-muted)' }}>Clique para selecionar pasta com .gltf + texturas</p>
+                )}
+                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.5rem' }}>
+                  Selecione a pasta que contém o arquivo .gltf e as texturas
+                </small>
               </div>
             </div>
 

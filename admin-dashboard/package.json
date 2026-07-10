@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gltf-transform/core": "^4.4.1",
+    "@gltf-transform/extensions": "^4.4.1",
+    "@gltf-transform/functions": "^4.4.1",
     "@supabase/supabase-js": "^2.106.2",
     "lucide-react": "^1.17.0",
     "qrcode.react": "^4.2.0",
