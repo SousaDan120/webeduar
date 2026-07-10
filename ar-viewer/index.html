@@ -22,16 +22,6 @@
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
-      /* Prevent camera video distortion/zoom issues */
-      video.arjs-video {
-        object-fit: cover !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        z-index: -2 !important;
-      }
 
       /* Force A-Frame scene canvas to take full screen */
       a-scene {
@@ -302,10 +292,9 @@
       <div id="exhibit-description"></div>
     </div>
 
-    <!-- AR Scene -->
     <a-scene
       embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
       renderer="logarithmicDepthBuffer: true; antialias: true;"
       vr-mode-ui="enabled: false"
       loading-screen="enabled: false"
