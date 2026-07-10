@@ -61,22 +61,20 @@ function normalizeDimensions(dimensions) {
 // Função para converter GLTF com texturas para GLB
 async function convertGltfToGlb(gltfFile, textureFiles) {
   try {
-    const io = new NodeIO(ALL_EXTENSIONS)
+    // Criar um objeto URL temporário para o arquivo GLTF
+    const gltfUrl = URL.createObjectURL(gltfFile)
     
-    // Criar estrutura de arquivos para o conversor
-    const fileMap = new Map()
-    fileMap.set(gltfFile.name, await gltfFile.arrayBuffer())
-    
-    // Adicionar texturas ao mapa de arquivos
+    // Criar URLs temporários para as texturas
+    const textureUrls = new Map()
     for (const textureFile of textureFiles) {
-      fileMap.set(textureFile.webkitRelativePath || textureFile.name, await textureFile.arrayBuffer())
+      const url = URL.createObjectURL(textureFile)
+      textureUrls.set(textureFile.name, url)
     }
     
-    // Configurar o IO para usar os arquivos
-    io.setFileSystem(fileMap)
+    const io = new NodeIO(ALL_EXTENSIONS)
     
-    // Ler o documento GLTF
-    const document = await io.read(gltfFile.name)
+    // Ler o documento GLTF diretamente da URL
+    const document = await io.read(gltfUrl)
     
     // Aplicar otimizações
     await document.transform(
@@ -87,6 +85,10 @@ async function convertGltfToGlb(gltfFile, textureFiles) {
     
     // Escrever como GLB
     const glbBuffer = await io.writeBinary(document)
+    
+    // Limpar URLs temporárias
+    URL.revokeObjectURL(gltfUrl)
+    textureUrls.forEach(url => URL.revokeObjectURL(url))
     
     // Criar Blob GLB
     const glbBlob = new Blob([glbBuffer], { type: 'model/gltf-binary' })
