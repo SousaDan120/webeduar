@@ -548,6 +548,31 @@
         }
       })
 
+      // ── Page Visibility (Pausar/Reativar câmara e áudio) ──────
+      document.addEventListener('visibilitychange', () => {
+        const videoEl = document.querySelector('video.arjs-video')
+        
+        if (document.hidden) {
+          // Pausar áudio se estiver tocando
+          if (audio && audioPlaying) {
+            audio.pause()
+            audioPlaying = false
+            audioBtn.textContent = '🔊'
+          }
+          // Pausar/Desativar os tracks da câmara
+          if (videoEl && videoEl.srcObject) {
+            const tracks = videoEl.srcObject.getTracks()
+            tracks.forEach(track => { track.enabled = false })
+          }
+        } else {
+          // Reativar os tracks da câmara ao retornar ao primeiro plano
+          if (videoEl && videoEl.srcObject) {
+            const tracks = videoEl.srcObject.getTracks()
+            tracks.forEach(track => { track.enabled = true })
+          }
+        }
+      })
+
       window.addEventListener('load', init)
     </script>
   </body>
