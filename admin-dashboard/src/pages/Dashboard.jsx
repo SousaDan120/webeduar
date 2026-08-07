@@ -50,6 +50,16 @@ export default function Dashboard({ isAdmin }) {
     }
   }
 
+  const getFileSize = (file) => {
+    // Supabase Storage pode retornar o tamanho em diferentes campos
+    return (
+      file?.metadata?.size ||
+      file?.metadata?.contentLength ||
+      file?.size ||
+      0
+    )
+  }
+
   const calculateStorageUsage = async () => {
     try {
       setCalculatingStorage(true)
@@ -58,26 +68,22 @@ export default function Dashboard({ isAdmin }) {
       // Fetch file info from 'models' bucket
       const { data: modelsList, error: modelsError } = await supabase.storage
         .from('models')
-        .list('', { limit: 100 })
+        .list('', { limit: 1000, sortBy: { column: 'name', order: 'asc' } })
       
       if (!modelsError && modelsList) {
         modelsList.forEach(file => {
-          if (file.metadata && file.metadata.size) {
-            totalSize += file.metadata.size
-          }
+          totalSize += getFileSize(file)
         })
       }
 
       // Fetch file info from 'audio' bucket
       const { data: audioList, error: audioError } = await supabase.storage
         .from('audio')
-        .list('', { limit: 100 })
+        .list('', { limit: 1000, sortBy: { column: 'name', order: 'asc' } })
       
       if (!audioError && audioList) {
         audioList.forEach(file => {
-          if (file.metadata && file.metadata.size) {
-            totalSize += file.metadata.size
-          }
+          totalSize += getFileSize(file)
         })
       }
 

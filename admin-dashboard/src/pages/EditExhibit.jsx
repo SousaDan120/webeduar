@@ -224,8 +224,12 @@ export default function EditExhibit({ isAdmin }) {
       setModelFile(null)
       setAudioFile(null)
       
-      alert(isEditing ? 'Exposição atualizada com sucesso!' : 'Nova exposição criada com sucesso!')
-      navigate('/dashboard')
+      setSuccess(isEditing ? 'Exposição atualizada com sucesso! Redirecionando...' : 'Nova exposição criada com sucesso! Redirecionando...')
+      
+      // Aguarda um momento para o utilizador ver a mensagem e depois navega
+      setTimeout(() => {
+        navigate('/dashboard')
+      }, 1200)
     } catch (err) {
       setError('Erro: ' + err.message)
       setSuccess(null)
