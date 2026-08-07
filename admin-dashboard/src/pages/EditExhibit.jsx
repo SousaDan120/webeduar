@@ -5,6 +5,7 @@ import { Upload, Save, ArrowLeft, Volume2, Box, QrCode, Download, Eye } from 'lu
 import { supabase } from '../lib/supabase'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 
 // Dynamically load Google Model Viewer component for 3D previewing
 if (!customElements.get('model-viewer')) {
@@ -23,6 +24,12 @@ const MARKERS = Array.from({ length: 10 }, (_, i) => i + 1)
 async function calculateModelBoundingBox(modelUrl) {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader()
+    
+    // Configurar DRACOLoader para modelos comprimidos com Draco
+    const dracoLoader = new DRACOLoader()
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
+    loader.setDRACOLoader(dracoLoader)
+    
     loader.load(modelUrl, (gltf) => {
       const box = new THREE.Box3().setFromObject(gltf.scene)
       const size = box.getSize(new THREE.Vector3())
